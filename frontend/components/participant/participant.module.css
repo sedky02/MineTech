@@ -101,7 +101,19 @@
 }
 
 .footer {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
   text-align: center;
   font-size: 14px;
   color: var(--text-faint);
+}
+
+.footer p {
+  margin: 0;
+}
+
+.screenLink {
+  text-decoration: none;
+  font-size: 16px;
 }
