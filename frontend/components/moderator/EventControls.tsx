@@ -1,41 +1,74 @@
-import type { EventStatus } from "@/lib/api/types";
+import type { EventStatus, ModeratorDashboard } from "@/lib/api/types";
 import styles from "./moderator.module.css";
 
 interface Props {
   status: EventStatus | null;
-  hasDisplayed: boolean;
+  dashboard: ModeratorDashboard;
   busy: boolean;
-  onPause: () => void;
-  onResume: () => void;
-  onClearDisplay: () => void;
-  onEnd: () => void;
+  onToggleSubmissions: () => void;
+  onClearScreen: () => void;
+  onEndEvent: () => void;
 }
 
-/** Emergency controls (SPEC §5). */
-export function EventControls({ status, hasDisplayed, busy, onPause, onResume, onClearDisplay, onEnd }: Props) {
+/**
+ * The control bar: a summary of the whole event on the left, routine
+ * submission control in the middle, and the emergency actions set apart on
+ * the right (SPEC §5).
+ */
+export function EventControls({ status, dashboard, busy, onToggleSubmissions, onClearScreen, onEndEvent }: Props) {
   const ended = status?.ended ?? false;
-  const label = ended ? "Event ended" : status?.paused ? "Submissions paused" : "Submissions open";
+  const state = ended ? "ended" : status?.paused ? "paused" : "open";
+  const stateLabel = { open: "Questions open", paused: "Questions paused", ended: "Event ended" }[state];
+
+  const summary = [
+    { label: "To review", value: dashboard.pending.length, attention: dashboard.pending.length > 0 },
+    { label: "With host", value: dashboard.awaitingHost.length },
+    { label: "Ready", value: dashboard.ready.length },
+    { label: "Answered", value: dashboard.stats.answered },
+    { label: "Rejected", value: dashboard.stats.rejected },
+  ];
 
   return (
-    <div className={styles.controls}>
-      <span className={styles.submissionState} data-state={ended ? "ended" : status?.paused ? "paused" : "open"}>
-        {label}
-      </span>
-      {status?.paused ? (
-        <button className="btn btn-sm btn-primary" onClick={onResume} disabled={busy || ended}>
-          Resume submissions
+    <section className={`panel ${styles.controlBar}`} aria-label="Event controls">
+      <dl className={styles.summary}>
+        {summary.map((item) => (
+          <div key={item.label} className={styles.summaryItem} data-attention={item.attention || undefined}>
+            <dt>{item.label}</dt>
+            <dd>{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className={styles.submissions}>
+        <span className={styles.submissionState} data-state={state}>
+          {stateLabel}
+        </span>
+        {!ended && (
+          <button
+            type="button"
+            className={`btn btn-sm ${status?.paused ? "btn-primary" : "btn-gold"}`}
+            onClick={onToggleSubmissions}
+            disabled={busy || !status}
+          >
+            {status?.paused ? "Resume questions" : "Pause questions"}
+          </button>
+        )}
+      </div>
+
+      <div className={styles.danger} role="group" aria-label="Emergency actions">
+        <button
+          type="button"
+          className="btn btn-sm btn-quiet"
+          onClick={onClearScreen}
+          disabled={busy || !dashboard.displayed}
+          title="Shows the event logo on the projector"
+        >
+          Clear screen
         </button>
-      ) : (
-        <button className="btn btn-sm btn-gold" onClick={onPause} disabled={busy || ended || !status}>
-          Pause submissions
+        <button type="button" className="btn btn-sm btn-quiet-danger" onClick={onEndEvent} disabled={busy || ended}>
+          End event…
         </button>
-      )}
-      <button className="btn btn-sm" onClick={onClearDisplay} disabled={busy || !hasDisplayed}>
-        Clear display
-      </button>
-      <button className="btn btn-sm btn-danger" onClick={onEnd} disabled={busy || ended}>
-        End event
-      </button>
-    </div>
+      </div>
+    </section>
   );
 }

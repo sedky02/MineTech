@@ -141,7 +141,8 @@ The moderator is the actual operator of the system.
 
 ### Dashboard
 
-- Pending questions, questions waiting for the host, and host-approved questions, each in its own list
+- Summary bar: how many questions are to review, with the host, ready, answered and rejected (the to-review count is highlighted when work is waiting, and also shown in the browser tab title)
+- Pending questions, questions waiting for the host, and host-approved questions, each in its own list ("To review", "With host", "Ready"); questions under 2 minutes old are tagged "New"
 - Category filter (chips with counts) above the three lists
 - Currently displayed question
 - Previous question: the most recently answered question, so the moderator can see what was just on screen
@@ -154,6 +155,8 @@ The moderator is the actual operator of the system.
 - Remove (displayed question → idle screen)
 - Mark as answered
 - Roll back (re-display the previous question)
+- Keyboard shortcuts on a focused question card: `A` send to host, `R` reject, `S` show on screen, `Alt+↑/↓` change priority. Focus moves to the next card after an action, so a burst of questions can be cleared without the mouse.
+- Every action confirms itself with a short toast; errors stay until dismissed. Only the card being acted on is disabled while a request runs.
 - Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
 - Pause / Resume submissions
 
@@ -166,7 +169,9 @@ The moderator decides when a question appears on the presentation.
 | Pause submissions | New submissions are refused |
 | Resume submissions | Submissions accepted again |
 | Clear current display | Same as **Remove** on the displayed question: presentation shows the idle screen |
-| End event | Clears the display (idle screen) and closes submissions for good |
+| End event | Clears the display (idle screen) and closes submissions for good. Asks for confirmation first |
+
+Emergency actions are grouped apart from the routine pause/resume control and styled with less weight, so they are not hit by accident.
 
 ---
 
@@ -453,7 +458,7 @@ GET    /moderator/event/status
 
 `PATCH /moderator/questions/reorder` takes question ids from one list (`PENDING`, `MODERATOR_APPROVED` or `HOST_APPROVED`) in their new order. The questions swap the positions they already hold, so questions not in the request (hidden by a category filter, or arriving meanwhile) keep their place. A question entering a list gets the current time as its position, so it lands at the end. Mixed lists return `409`, unknown ids `404`. Emits `QUESTION_REORDERED` to the moderator room (and the host room for the host queue).
 
-`GET /moderator/questions` returns the pending, host-approved, displayed and previous (last answered) questions, so one call rebuilds the whole dashboard after a reconnect. "Clear current display" calls `remove` on the displayed question; it doesn't need its own endpoint.
+`GET /moderator/questions` returns the pending, waiting-for-host, host-approved, displayed and previous (last answered) questions plus `stats` (answered and rejected counts), so one call rebuilds the whole dashboard after a reconnect. "Clear current display" calls `remove` on the displayed question; it doesn't need its own endpoint.
 
 ### Host
 

@@ -132,6 +132,7 @@ describe('Question workflow (SPEC §4, §20)', () => {
       ready: [],
       displayed: null,
       previous: { id: created.id, status: 'ANSWERED' },
+      stats: { answered: 1, rejected: 0 },
     });
   });
 
@@ -145,6 +146,10 @@ describe('Question workflow (SPEC §4, §20)', () => {
 
     expect(r.host.names()).toEqual([]);
     expect((await host('get', '/host/question')).body.question).toBeNull();
+    expect((await mod('get', '/moderator/questions')).body.stats).toEqual({
+      answered: 0,
+      rejected: 1,
+    });
     await host('patch', `/host/questions/${id}/approve`).expect(409);
   });
 

@@ -39,6 +39,7 @@ export interface ModeratorDashboard {
   ready: ModeratorQuestion[];
   displayed: ModeratorQuestion | null;
   previous: ModeratorQuestion | null;
+  stats: { answered: number; rejected: number };
 }
 
 export interface PublicEventStatus {

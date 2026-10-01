@@ -293,3 +293,35 @@ textarea.input {
   display: grid;
   gap: 18px;
 }
+
+/* Secondary buttons: same block shape, less visual weight. */
+.btn-quiet {
+  --btn-bg: var(--panel);
+  color: var(--text-dim);
+  text-shadow: none;
+}
+
+.btn-quiet-danger {
+  --btn-bg: var(--panel);
+  color: #ff8b78;
+  text-shadow: none;
+}
+
+.btn-quiet:hover:not(:disabled),
+.btn-quiet-danger:hover:not(:disabled) {
+  color: var(--text);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0 5px;
+  border: 2px solid var(--outline);
+  background: var(--panel);
+  box-shadow: inset -2px -2px 0 var(--bevel-dark);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--text);
+}

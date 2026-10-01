@@ -13,28 +13,88 @@
   gap: 12px 20px;
 }
 
-.controls {
+.logout {
   margin-left: auto;
+}
+
+/* ------------------------------------------------------------ control bar */
+
+.controlBar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 16px 28px;
+  padding: 12px 16px;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  margin: 0;
+}
+
+.summaryItem {
+  display: grid;
+  gap: 2px;
+}
+
+.summaryItem dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.summaryItem dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryItem[data-attention] dd {
+  color: var(--gold);
+}
+
+.submissions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Emergency actions sit apart, behind a divider, at lower visual weight. */
+.danger {
+  margin-left: auto;
+  display: flex;
   gap: 8px;
+  padding-left: 20px;
+  border-left: 3px solid var(--outline);
 }
 
+/* A status, not a button: no bevel, a coloured block marks the state. */
 .submissionState {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 600;
-  padding: 4px 10px;
+}
+
+.submissionState::before {
+  content: "";
+  width: 12px;
+  height: 12px;
   border: 2px solid var(--outline);
-  background: var(--grass-dark);
+  background: var(--emerald);
 }
 
-.submissionState[data-state="paused"] {
-  background: #8a6a12;
+.submissionState[data-state="paused"]::before {
+  background: var(--gold);
 }
 
-.submissionState[data-state="ended"] {
-  background: var(--redstone-dark);
+.submissionState[data-state="ended"]::before {
+  background: var(--redstone);
 }
 
 .stage {
@@ -47,7 +107,14 @@
   display: grid;
   gap: 10px;
   align-content: start;
-  border-color: var(--outline);
+}
+
+.onScreen[data-live] {
+  border-color: #6b1f15;
+  box-shadow:
+    inset var(--pixel) var(--pixel) 0 var(--bevel-light),
+    inset calc(var(--pixel) * -1) calc(var(--pixel) * -1) 0 var(--bevel-dark),
+    0 0 0 3px var(--redstone);
 }
 
 .onScreenText {
@@ -92,11 +159,47 @@
 .column {
   padding: 16px;
   min-height: 200px;
+  min-width: 0;
+}
+
+.columnHeader {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 10px;
+  margin-bottom: 14px;
+}
+
+.columnHeader :global(.panel-title) {
+  margin: 0;
+  color: var(--text);
+}
+
+.columnHint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+.listTools {
+  display: grid;
+  gap: 8px;
+}
+
+.shortcuts {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-faint);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 .count {
-  margin-left: auto;
   min-width: 28px;
+  font-variant-numeric: tabular-nums;
   padding: 2px 6px;
   text-align: center;
   background: var(--panel-inset);
@@ -107,7 +210,7 @@
 .list {
   display: grid;
   gap: 10px;
-  max-height: calc(100dvh - 420px);
+  max-height: max(360px, calc(100dvh - 480px));
   min-height: 120px;
   overflow-y: auto;
   padding-right: 4px;
@@ -120,6 +223,18 @@
   display: grid;
   gap: 8px;
   animation: slide-in 200ms steps(3) both;
+  transition: opacity 120ms;
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* Only the card being acted on dims; the rest of the page stays usable. */
+.card[data-busy] {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 @keyframes slide-in {
@@ -134,6 +249,23 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.newBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 6px;
+  background: var(--gold);
+  color: var(--outline);
+  border: 2px solid var(--outline);
+}
+
+.hostPill {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 2px solid var(--outline);
+  background: #2f2b1d;
+  color: var(--gold);
 }
 
 .badge {
@@ -174,10 +306,96 @@
   gap: 8px;
 }
 
+/* ---------------------------------------------------------------- toasts */
+
+.toasts {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
+  border-left: 8px solid var(--grass);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+  animation: slide-in 160ms steps(3) both;
+}
+
+.toast[data-tone="error"] {
+  border-left-color: var(--redstone);
+}
+
+.toast > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.toastClose {
+  background: none;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.toastClose:hover {
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------- dialog */
+
+.dialog {
+  width: min(460px, calc(100vw - 32px));
+  color: var(--text);
+  padding: 24px;
+}
+
+.dialog::backdrop {
+  background: rgba(5, 5, 8, 0.7);
+}
+
+.dialogTitle {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.dialogBody {
+  display: grid;
+  gap: 8px;
+}
+
+.dialogBody p {
+  margin: 0;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
 @media (max-width: 1100px) {
   .stage,
   .columns {
     grid-template-columns: 1fr;
+  }
+
+  .danger {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
   }
 
   .list {
@@ -296,4 +514,9 @@
 .totalCount {
   color: var(--text-faint);
   font-size: 12px;
+}
+
+.count[data-attention] {
+  background: var(--gold);
+  color: var(--outline);
 }

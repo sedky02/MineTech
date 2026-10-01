@@ -327,7 +327,7 @@ export class QuestionsService {
         include: withCategory,
       });
 
-    const [pending, awaitingHost, ready, displayed, previous] =
+    const [pending, awaitingHost, ready, displayed, previous, finished] =
       await Promise.all([
         byStatus(QuestionStatus.PENDING),
         byStatus(QuestionStatus.MODERATOR_APPROVED),
@@ -341,7 +341,16 @@ export class QuestionsService {
           orderBy: { answeredAt: 'desc' },
           include: withCategory,
         }),
+        this.prisma.question.groupBy({
+          by: ['status'],
+          where: {
+            status: { in: [QuestionStatus.ANSWERED, QuestionStatus.REJECTED] },
+          },
+          _count: { _all: true },
+        }),
       ]);
+    const countOf = (status: QuestionStatus) =>
+      finished.find((row) => row.status === status)?._count._all ?? 0;
 
     return {
       pending: pending.map(toModeratorView),
@@ -349,6 +358,10 @@ export class QuestionsService {
       ready: ready.map(toModeratorView),
       displayed: displayed ? toModeratorView(displayed) : null,
       previous: previous ? toModeratorView(previous) : null,
+      stats: {
+        answered: countOf(QuestionStatus.ANSWERED),
+        rejected: countOf(QuestionStatus.REJECTED),
+      },
     };
   }
 
