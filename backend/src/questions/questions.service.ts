@@ -28,6 +28,26 @@ import {
 
 type Tx = Prisma.TransactionClient;
 
+interface DisplayChange {
+  /** Was on screen and is now answered. */
+  answered: QuestionWithCategory | null;
+  /** Was on screen and went back to where it came from. */
+  removed: QuestionWithCategory | null;
+  /** Now on screen. */
+  current: QuestionWithCategory;
+}
+
+/**
+ * Where a question goes when it leaves the screen without being answered:
+ * back to the ready list, or to the host's queue if the moderator skipped
+ * the host to display it.
+ */
+function statusBeforeDisplay(question: { hostApprovedAt: Date | null }) {
+  return question.hostApprovedAt
+    ? QuestionStatus.HOST_APPROVED
+    : QuestionStatus.MODERATOR_APPROVED;
+}
+
 /**
  * The only place question statuses change. Every transition is a conditional
  * UPDATE on the expected current status, so double clicks and concurrent
@@ -160,85 +180,99 @@ export class QuestionsService {
     return toModeratorView(question);
   }
 
-  /** Puts a question on screen; whatever was displayed is marked answered. */
+  /**
+   * Puts a question on screen; whatever was displayed is marked answered.
+   * Normally the question is HOST_APPROVED, but the moderator may also skip
+   * the host and display a question still waiting for host review.
+   */
   async display(id: string) {
     const now = new Date();
-    let result: {
-      previous: QuestionWithCategory | null;
-      current: QuestionWithCategory;
-    };
-    try {
-      result = await this.prisma.$transaction(async (tx) => {
-        const displayed = await tx.question.findFirst({
-          where: { status: QuestionStatus.DISPLAYED },
-          select: { id: true },
-        });
-        const previous =
-          displayed && displayed.id !== id
-            ? await this.transition(
-                tx,
-                displayed.id,
-                QuestionStatus.DISPLAYED,
-                {
-                  status: QuestionStatus.ANSWERED,
-                  answeredAt: now,
-                },
-              )
-            : null;
-        const current = await this.transition(
-          tx,
-          id,
-          QuestionStatus.HOST_APPROVED,
-          {
-            status: QuestionStatus.DISPLAYED,
-            displayedAt: now,
-          },
-        );
-        return { previous, current };
+    const change = await this.changeDisplay(async (tx) => {
+      const displayed = await tx.question.findFirst({
+        where: { status: QuestionStatus.DISPLAYED },
+        select: { id: true },
       });
-    } catch (error) {
-      // The partial unique index rejected a second DISPLAYED question.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'Another question was displayed at the same time. Refresh and try again.',
-        );
-      }
-      throw error;
-    }
+      const answered =
+        displayed && displayed.id !== id
+          ? await this.transition(tx, displayed.id, QuestionStatus.DISPLAYED, {
+              status: QuestionStatus.ANSWERED,
+              answeredAt: now,
+            })
+          : null;
+      const current = await this.transition(
+        tx,
+        id,
+        [QuestionStatus.HOST_APPROVED, QuestionStatus.MODERATOR_APPROVED],
+        { status: QuestionStatus.DISPLAYED, displayedAt: now },
+      );
+      return { answered, removed: null, current };
+    });
 
-    if (result.previous) this.emitAnswered(result.previous);
-    this.realtime.emit(
-      Room.PRESENTATION,
-      SocketEvent.QUESTION_DISPLAYED,
-      toPublicView(result.current),
-    );
-    this.realtime.emit(
-      Room.MODERATOR,
-      SocketEvent.QUESTION_DISPLAYED,
-      toModeratorView(result.current),
-    );
-    return toModeratorView(result.current);
+    this.emitDisplayChange(change);
+    if (change.current.hostApprovedAt === null) {
+      // Taken from the host's queue: the host view must move on.
+      this.realtime.emit(Room.HOST, SocketEvent.QUESTION_DISPLAYED, { id });
+    }
+    return toModeratorView(change.current);
   }
 
-  /** Takes the question off screen and back to the ready list. */
+  /**
+   * Shows the previous (most recently answered) question again. Whatever is
+   * on screen was interrupted rather than answered, so it goes back to where
+   * it came from. Rolling back repeatedly walks back through the history.
+   */
+  async rollback(id: string) {
+    const now = new Date();
+    const change = await this.changeDisplay(async (tx) => {
+      const latest = await tx.question.findFirst({
+        where: { status: QuestionStatus.ANSWERED },
+        orderBy: { answeredAt: 'desc' },
+        select: { id: true },
+      });
+      if (latest?.id !== id) {
+        const exists = await tx.question.findUnique({ where: { id } });
+        if (!exists) throw new NotFoundException('Question not found');
+        throw new ConflictException(
+          'Only the previous question can be rolled back',
+        );
+      }
+
+      const displayed = await tx.question.findFirst({
+        where: { status: QuestionStatus.DISPLAYED },
+        select: { id: true, hostApprovedAt: true },
+      });
+      const removed = displayed
+        ? await this.transition(tx, displayed.id, QuestionStatus.DISPLAYED, {
+            status: statusBeforeDisplay(displayed),
+          })
+        : null;
+      const current = await this.transition(tx, id, QuestionStatus.ANSWERED, {
+        status: QuestionStatus.DISPLAYED,
+        displayedAt: now,
+        answeredAt: null,
+      });
+      return { answered: null, removed, current };
+    });
+
+    this.emitDisplayChange(change);
+    return toModeratorView(change.current);
+  }
+
+  /** Takes the question off screen and back to where it came from. */
   async remove(id: string) {
+    const existing = await this.prisma.question.findUnique({
+      where: { id },
+      select: { hostApprovedAt: true },
+    });
+    if (!existing) throw new NotFoundException('Question not found');
+
     const question = await this.transition(
       this.prisma,
       id,
       QuestionStatus.DISPLAYED,
-      {
-        status: QuestionStatus.HOST_APPROVED,
-      },
+      { status: statusBeforeDisplay(existing) },
     );
-    this.realtime.emit(Room.PRESENTATION, SocketEvent.QUESTION_REMOVED, { id });
-    this.realtime.emit(
-      Room.MODERATOR,
-      SocketEvent.QUESTION_REMOVED,
-      toModeratorView(question),
-    );
+    this.emitRemoved(question);
     return toModeratorView(question);
   }
 
@@ -369,11 +403,12 @@ export class QuestionsService {
   private async transition(
     db: Tx,
     id: string,
-    from: QuestionStatus,
+    from: QuestionStatus | QuestionStatus[],
     data: Prisma.QuestionUpdateManyMutationInput,
   ): Promise<QuestionWithCategory> {
+    const expected = Array.isArray(from) ? from : [from];
     const { count } = await db.question.updateMany({
-      where: { id, status: from },
+      where: { id, status: { in: expected } },
       data,
     });
     if (count === 0) {
@@ -383,13 +418,65 @@ export class QuestionsService {
       });
       if (!existing) throw new NotFoundException('Question not found');
       throw new ConflictException(
-        `Question is ${existing.status}, expected ${from}`,
+        `Question is ${existing.status}, expected ${expected.join(' or ')}`,
       );
     }
     return db.question.findUniqueOrThrow({
       where: { id },
       include: withCategory,
     });
+  }
+
+  /** Runs a change to what is on screen in one transaction. */
+  private async changeDisplay(work: (tx: Tx) => Promise<DisplayChange>) {
+    try {
+      return await this.prisma.$transaction(work);
+    } catch (error) {
+      // The partial unique index rejected a second DISPLAYED question.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Another question was displayed at the same time. Refresh and try again.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  private emitDisplayChange({ answered, removed, current }: DisplayChange) {
+    if (answered) this.emitAnswered(answered);
+    if (removed) this.emitRemoved(removed);
+    this.realtime.emit(
+      Room.PRESENTATION,
+      SocketEvent.QUESTION_DISPLAYED,
+      toPublicView(current),
+    );
+    this.realtime.emit(
+      Room.MODERATOR,
+      SocketEvent.QUESTION_DISPLAYED,
+      toModeratorView(current),
+    );
+  }
+
+  private emitRemoved(question: QuestionWithCategory) {
+    this.realtime.emit(Room.PRESENTATION, SocketEvent.QUESTION_REMOVED, {
+      id: question.id,
+    });
+    this.realtime.emit(
+      Room.MODERATOR,
+      SocketEvent.QUESTION_REMOVED,
+      toModeratorView(question),
+    );
+    if (question.status === QuestionStatus.MODERATOR_APPROVED) {
+      // It skipped the host on the way up, so it returns to the host's queue.
+      this.realtime.emit(
+        Room.HOST,
+        SocketEvent.QUESTION_READY_FOR_HOST,
+        toPublicView(question),
+      );
+    }
   }
 
   private emitAnswered(question: QuestionWithCategory) {

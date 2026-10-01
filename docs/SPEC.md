@@ -79,17 +79,17 @@ Participant submits
                 ↓
       MODERATOR_APPROVED
                 ↓
-          Host reviews
-          ↙          ↘
-       Reject       Approve
-                       ↓
-                HOST_APPROVED
-                       ↓
-             Moderator selects
-                       ↓
-                  DISPLAYED
-                       ↓
-                  ANSWERED
+          Host reviews ─────────────┐
+          ↙          ↘              │ Moderator skips the host
+       Reject       Approve         │ (host has no time to review)
+                       ↓            │
+                HOST_APPROVED       │
+                       ↓            │
+             Moderator selects      │
+                       ↓            │
+                  DISPLAYED ◄───────┘
+                       ↓      ▲
+                  ANSWERED ───┘ Roll back (previous question only)
 ```
 
 ### States
@@ -114,19 +114,23 @@ The backend enforces these. Any other transition is rejected.
 | `MODERATOR_APPROVED` | `HOST_APPROVED` | Host | `PATCH /host/questions/:id/approve` |
 | `MODERATOR_APPROVED` | `REJECTED` | Host | `PATCH /host/questions/:id/reject` |
 | `HOST_APPROVED` | `DISPLAYED` | Moderator | `PATCH /moderator/questions/:id/display` |
+| `MODERATOR_APPROVED` | `DISPLAYED` | Moderator (skips the host) | `PATCH /moderator/questions/:id/display` |
 | `DISPLAYED` | `ANSWERED` | Moderator | `PATCH /moderator/questions/:id/answer` |
-| `DISPLAYED` | `HOST_APPROVED` | Moderator | `PATCH /moderator/questions/:id/remove` |
+| `DISPLAYED` | `HOST_APPROVED`, or `MODERATOR_APPROVED` if it skipped the host | Moderator | `PATCH /moderator/questions/:id/remove` |
+| `ANSWERED` (most recent only) | `DISPLAYED` | Moderator | `PATCH /moderator/questions/:id/rollback` |
 
 ### Display rules
 
 - **Display while another question is displayed:** the current question is marked `ANSWERED` automatically, and the new one becomes `DISPLAYED`. Both changes happen in a single database transaction.
-- **Remove:** the question goes back to `HOST_APPROVED` (so it can be displayed again later), and the presentation switches to the idle screen (event logo + event name).
+- **Skip the host:** when the host has no time to review, the moderator can display a question straight from "Waiting for host". The host's view moves on to the next question immediately. `host_approved_at` stays empty, so skipped questions remain identifiable.
+- **Remove:** the question goes back to where it came from (`HOST_APPROVED`, or the host's queue if it skipped the host), so it can be displayed again later, and the presentation switches to the idle screen (event logo + event name).
 - **Answer:** the question becomes `ANSWERED`, and the presentation switches to the idle screen.
+- **Roll back:** re-displays the previous question (the most recently answered one) and clears its `answered_at`. The question on screen, if any, was interrupted rather than answered, so it goes back to where it came from, as with Remove. Rolling back again walks further back through the history. Only the most recent answered question can be rolled back (`409` otherwise).
 
 ### Guarantees
 
 - A moderator rejection never reaches the host.
-- A host rejection never reaches the presentation.
+- A host rejection never reaches the presentation (only `MODERATOR_APPROVED` or `HOST_APPROVED` questions can be displayed, never `REJECTED` ones).
 - At most one question is `DISPLAYED` at any time.
 
 ---
@@ -146,8 +150,10 @@ The moderator is the actual operator of the system.
 
 - Approve / Reject (pending questions)
 - Display (host-approved questions; auto-answers the current one, see [Display rules](#display-rules))
+- Display now, skipping the host (questions waiting for host review)
 - Remove (displayed question → idle screen)
 - Mark as answered
+- Roll back (re-display the previous question)
 - Pause / Resume submissions
 
 The moderator decides when a question appears on the presentation.
@@ -234,7 +240,7 @@ Never ban by IP alone: many university users share the same public IP through NA
 
 | Field | Rule |
 | --- | --- |
-| `content` | 10–500 characters, trimmed |
+| `content` | Required, not blank: 1–500 characters after trimming |
 | `displayName` | Optional, max 50 characters |
 | `category` | Must be an active category (allowlist) |
 | Unknown fields | Rejected |
@@ -433,6 +439,7 @@ PATCH  /moderator/questions/:id/reject
 PATCH  /moderator/questions/:id/display
 PATCH  /moderator/questions/:id/remove
 PATCH  /moderator/questions/:id/answer
+PATCH  /moderator/questions/:id/rollback
 
 PATCH  /moderator/event/pause
 PATCH  /moderator/event/resume
@@ -499,7 +506,7 @@ GET /health
 | --- | --- |
 | `id` | |
 | `category_id` | FK → Category |
-| `content` | 10–500 chars |
+| `content` | 1–500 chars |
 | `display_name` | nullable, max 50 chars |
 | `participant_session_id` | anonymous session ID |
 | `source` | `PRE_EVENT` \| `LIVE`: set at creation by comparing `created_at` with `EVENT_STARTS_AT`. Informational only; it doesn't change the workflow |

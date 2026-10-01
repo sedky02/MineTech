@@ -63,7 +63,7 @@ Run the backend e2e suite after any change to questions, auth, event or realtime
 2. **Authorization is server-side.** Every moderator/host endpoint and socket connection checks identity, role, and that the state transition is allowed from the question's *current* DB state. Hiding UI is not authorization.
 3. **State transitions are enforced in one place** (the questions service), using the transition table in SPEC.md §4. Make transitions atomic (e.g. conditional `UPDATE ... WHERE status = <expected>`) so concurrent clicks can't double-apply.
 4. **Never report success on failure.** If the DB write fails, the participant gets an error, not a confirmation.
-5. **Validate on the server.** Question 10–500 chars, display name ≤ 50, category from allowlist, reject unknown fields (`whitelist` + `forbidNonWhitelisted` in Nest's `ValidationPipe`).
+5. **Validate on the server.** Question 1–500 chars (not blank), display name ≤ 50, category from allowlist, reject unknown fields (`whitelist` + `forbidNonWhitelisted` in Nest's `ValidationPipe`).
 6. **Escape user content.** Never use `dangerouslySetInnerHTML` for questions or names.
 7. **Rate limit by session *and* IP**, never by IP alone (campus NAT). Session limits (1 per 12 s, max 5 per 30 min) are checked against the DB under a per-session advisory lock; values are in `backend/src/common/constants.ts`.
 8. **Clients must survive reconnects.** On socket (re)connect: authenticate → fetch current state via REST → replace UI state. Never assume every event arrived.
@@ -71,13 +71,14 @@ Run the backend e2e suite after any change to questions, auth, event or realtime
 ## Question state machine
 
 ```text
-PENDING → MODERATOR_APPROVED → HOST_APPROVED → DISPLAYED → ANSWERED
-   ↓               ↓
+PENDING → MODERATOR_APPROVED → HOST_APPROVED → DISPLAYED ⇄ ANSWERED
+   ↓               ↓    └──── skip host ───────────┘  (rollback)
 REJECTED        REJECTED
 (moderator)     (host)
 ```
 
-- Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `DISPLAYED → ANSWERED`, `DISPLAYED → HOST_APPROVED` (remove).
+- Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `MODERATOR_APPROVED → DISPLAYED` (skip the host), `DISPLAYED → ANSWERED`, `DISPLAYED → back where it came from` (remove), `latest ANSWERED → DISPLAYED` (rollback).
+- "Back where it came from" = `HOST_APPROVED` if `host_approved_at` is set, else `MODERATOR_APPROVED` (host queue). Remove and rollback both use this (`statusBeforeDisplay` in the questions service).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.
 - At most one question is `DISPLAYED` at a time. Displaying a new question auto-marks the current one `ANSWERED`, in the same transaction.
 - Remove, answer, "clear display" and "end event" all leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question. End event also closes submissions for good.

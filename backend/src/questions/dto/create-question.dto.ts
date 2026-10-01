@@ -12,7 +12,7 @@ export class CreateQuestionDto {
 
   @Transform(trim)
   @IsString()
-  @Length(10, 500)
+  @Length(1, 500)
   content: string;
 
   @Transform(({ value }: { value: unknown }) => {

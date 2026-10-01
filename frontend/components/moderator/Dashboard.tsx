@@ -142,6 +142,16 @@ export function Dashboard() {
               <p className={styles.content}>{previous.content}</p>
               <Author name={previous.displayName} />
               <p className={styles.note}>Answered at {formatTime(previous.answeredAt)}</p>
+              <div className={styles.actions}>
+                <button
+                  className="btn btn-sm btn-gold"
+                  onClick={() => act(previous.id, "rollback")}
+                  disabled={busy !== null}
+                  title={displayed ? "The question on screen goes back to its list" : undefined}
+                >
+                  Roll back (show again)
+                </button>
+              </div>
             </>
           ) : (
             <p className="muted">No answered questions yet.</p>
@@ -169,7 +179,11 @@ export function Dashboard() {
               key={q.id}
               question={q}
               note={index === 0 ? "The host is seeing this one now" : `Queued #${index + 1}`}
-            />
+            >
+              <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={busy !== null}>
+                Display now (skip host)
+              </button>
+            </QuestionCard>
           ))}
         </Column>
 

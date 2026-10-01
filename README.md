@@ -14,7 +14,7 @@ Student submits ──► Moderator approves ──► Host approves ──► M
 ```
 
 - **Students** pick a category, type a question, and submit, anonymously by default. They never see other questions.
-- **The moderator** runs the event: reviews incoming questions, chooses what goes on screen, and can pause submissions or end the event.
+- **The moderator** runs the event: reviews incoming questions, chooses what goes on screen (even before the host has reviewed it), can roll back to the previous question, and can pause submissions or end the event.
 - **The host** sees one question at a time with two buttons: Approve or Reject. Nothing else, so they can stay focused on the speakers.
 - **The presentation screen** (`/presentation`) shows the current question full-screen, or the event logo when nothing is displayed.
 
@@ -95,7 +95,7 @@ cd frontend
 npm run lint && npm run typecheck && npm run build
 ```
 
-The backend e2e suite drives the real API and real Socket.IO clients through every acceptance criterion in the spec: the main flow, rejections never leaking to the host or projector, rate limits, validation, role checks, pause/resume/end, and concurrent clicks.
+The backend e2e suite drives the real API and real Socket.IO clients through every acceptance criterion in the spec: the main flow, rejections never leaking to the host or projector, rate limits, validation, role checks, pause/resume/end, skipping the host, rolling back, and concurrent clicks.
 
 ## Deployment
 

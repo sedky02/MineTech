@@ -214,15 +214,124 @@ describe('Question workflow (SPEC §4, §20)', () => {
 
   it('rejects transitions from the wrong state', async () => {
     const id = await createQuestion();
+    await mod('patch', `/moderator/questions/${id}/display`).expect(409);
     await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
     await mod('patch', `/moderator/questions/${id}/approve`).expect(409);
-    await mod('patch', `/moderator/questions/${id}/display`).expect(409);
     await mod('patch', `/moderator/questions/${id}/answer`).expect(409);
+    await mod('patch', `/moderator/questions/${id}/rollback`).expect(409);
     await mod(
       'patch',
       '/moderator/questions/00000000-0000-4000-8000-000000000000/approve',
     ).expect(404);
     await mod('patch', '/moderator/questions/not-a-uuid/approve').expect(400);
+  });
+
+  describe('displaying without waiting for the host', () => {
+    it('lets the moderator display a question the host has not reviewed', async () => {
+      const id = await createQuestion('Can the moderator skip the host?');
+      await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
+      const r = await rooms();
+
+      const res = await mod(
+        'patch',
+        `/moderator/questions/${id}/display`,
+      ).expect(200);
+      expect(res.body).toMatchObject({
+        status: 'DISPLAYED',
+        hostApprovedAt: null,
+      });
+      expect(await r.presentation.waitFor('QUESTION_DISPLAYED')).toMatchObject({
+        id,
+      });
+      expect(await r.host.waitFor('QUESTION_DISPLAYED')).toEqual({ id });
+
+      // The host's view moves on, and a late click can't act on it.
+      expect((await host('get', '/host/question')).body.question).toBeNull();
+      await host('patch', `/host/questions/${id}/approve`).expect(409);
+    });
+
+    it('returns a skipped question to the host queue when removed', async () => {
+      const id = await createQuestion('Back to the host after removal?');
+      await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/display`).expect(200);
+      const r = await rooms();
+
+      const res = await mod(
+        'patch',
+        `/moderator/questions/${id}/remove`,
+      ).expect(200);
+      expect(res.body.status).toBe('MODERATOR_APPROVED');
+      expect(await r.host.waitFor('QUESTION_READY_FOR_HOST')).toMatchObject({
+        id,
+      });
+      expect((await host('get', '/host/question')).body.question.id).toBe(id);
+    });
+
+    it('still never displays a question the host rejected', async () => {
+      const id = await createQuestion();
+      await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
+      await host('patch', `/host/questions/${id}/reject`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/display`).expect(409);
+    });
+  });
+
+  describe('rolling back to the previous question', () => {
+    it('re-displays the previous question and returns the current one to ready', async () => {
+      const first = await toHostApproved('First question shown?');
+      const second = await toHostApproved('Second question shown?');
+      await mod('patch', `/moderator/questions/${first}/display`).expect(200);
+      await mod('patch', `/moderator/questions/${second}/display`).expect(200);
+      const r = await rooms();
+
+      const res = await mod(
+        'patch',
+        `/moderator/questions/${first}/rollback`,
+      ).expect(200);
+      expect(res.body).toMatchObject({
+        id: first,
+        status: 'DISPLAYED',
+        answeredAt: null,
+      });
+      await settle();
+      expect(r.presentation.names()).toEqual([
+        'QUESTION_REMOVED',
+        'QUESTION_DISPLAYED',
+      ]);
+      expect(
+        (await ctx.http().get('/presentation/current')).body.question.id,
+      ).toBe(first);
+
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.displayed.id).toBe(first);
+      expect(body.ready.map((q: any) => q.id)).toEqual([second]);
+      expect(body.previous).toBeNull();
+    });
+
+    it('walks back through the history and works from the idle screen', async () => {
+      const a = await toHostApproved('Question A?');
+      const b = await toHostApproved('Question B?');
+      for (const id of [a, b]) {
+        await mod('patch', `/moderator/questions/${id}/display`).expect(200);
+        await mod('patch', `/moderator/questions/${id}/answer`).expect(200);
+      }
+
+      await mod('patch', `/moderator/questions/${a}/rollback`).expect(409);
+      await mod('patch', `/moderator/questions/${b}/rollback`).expect(200);
+      expect((await mod('get', '/moderator/questions')).body.previous.id).toBe(
+        a,
+      );
+      await mod('patch', `/moderator/questions/${a}/rollback`).expect(200);
+      expect(
+        (await ctx.http().get('/presentation/current')).body.question.id,
+      ).toBe(a);
+    });
+
+    it('rejects unknown questions', async () => {
+      await mod(
+        'patch',
+        '/moderator/questions/00000000-0000-4000-8000-000000000000/rollback',
+      ).expect(404);
+    });
   });
 
   it('applies a double click only once', async () => {

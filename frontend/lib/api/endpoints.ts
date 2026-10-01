@@ -30,7 +30,7 @@ export const authApi = {
   me: () => apiFetch<{ user: AuthUser }>("/auth/me"),
 };
 
-export type ModeratorAction = "approve" | "reject" | "display" | "remove" | "answer";
+export type ModeratorAction = "approve" | "reject" | "display" | "remove" | "answer" | "rollback";
 
 export const moderatorApi = {
   dashboard: () => apiFetch<ModeratorDashboard>("/moderator/questions"),

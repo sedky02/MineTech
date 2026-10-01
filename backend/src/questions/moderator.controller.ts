@@ -43,6 +43,11 @@ export class ModeratorController {
     return this.questions.remove(id);
   }
 
+  @Patch('questions/:id/rollback')
+  rollback(@Param('id', ParseUUIDPipe) id: string) {
+    return this.questions.rollback(id);
+  }
+
   @Patch('questions/:id/answer')
   answer(@Param('id', ParseUUIDPipe) id: string) {
     return this.questions.answer(id);

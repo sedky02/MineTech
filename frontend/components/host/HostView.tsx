@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/Logo";
 import { LoadingScreen, MessageScreen } from "@/components/ui/StatusScreens";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
+import { ApiError } from "@/lib/api/client";
 import { hostApi } from "@/lib/api/endpoints";
 import type { PublicQuestion } from "@/lib/api/types";
 import styles from "./host.module.css";
@@ -49,7 +50,13 @@ export function HostView() {
     try {
       await hostApi[decision](id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Action failed");
+      setError(
+        e instanceof ApiError && e.status === 409
+          ? "The moderator already handled that question."
+          : e instanceof Error
+            ? e.message
+            : "Action failed",
+      );
     }
     await refresh();
   }

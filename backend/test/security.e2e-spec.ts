@@ -28,8 +28,9 @@ describe('Security and validation (SPEC §8, §9)', () => {
     it.each([
       ['an unknown category', { category: 'cooking' }],
       ['an inactive category', { category: 'retired' }],
-      ['a short question', { content: 'too short' }],
-      ['a whitespace-padded short question', { content: '    short    ' }],
+      ['an empty question', { content: '' }],
+      ['a whitespace-only question', { content: '   \n  ' }],
+      ['a missing question', { content: undefined }],
       ['a long question', { content: 'x'.repeat(501) }],
       ['a long display name', { displayName: 'n'.repeat(51) }],
       ['an unexpected field', { status: 'DISPLAYED' }],

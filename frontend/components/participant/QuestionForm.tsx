@@ -5,7 +5,7 @@ import { BlockSwatch } from "@/components/ui/CategoryTag";
 import { ApiError } from "@/lib/api/client";
 import { publicApi } from "@/lib/api/endpoints";
 import type { Category, PublicEventStatus } from "@/lib/api/types";
-import { DISPLAY_NAME_MAX, QUESTION_MAX, QUESTION_MIN, validateQuestion } from "@/lib/validation/question";
+import { DISPLAY_NAME_MAX, QUESTION_MAX, validateQuestion } from "@/lib/validation/question";
 import styles from "./participant.module.css";
 
 type LoadState = { status: "loading" } | { status: "error"; message: string } | { status: "ready" };
@@ -172,7 +172,6 @@ export function QuestionForm() {
           maxLength={QUESTION_MAX + 20}
           placeholder="What would you like to ask the speakers?"
           required
-          minLength={QUESTION_MIN}
         />
       </div>
 
