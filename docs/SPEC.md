@@ -217,13 +217,16 @@ There are no participant accounts. Protection relies on:
 - IP-level rate limiting
 - Server-side validation
 
-### Initial limits
+### Limits
 
-| Scope | Limit |
-| --- | --- |
-| Per session | 1 question per 10–15 seconds |
-| Per session | Max 5 questions per 30 minutes |
-| Per IP | Higher ceiling (tune on rehearsal) |
+| Scope | Limit | Where |
+| --- | --- | --- |
+| Per session | 1 question per 12 seconds | Checked against the `questions` table, so it survives restarts |
+| Per session | Max 5 questions per 30 minutes | Same |
+| Per IP | 60 `POST /questions` per minute | In-memory throttler (tune on rehearsal) |
+| Per IP | 10 `POST /auth/login` per minute | In-memory throttler |
+
+All values live in `backend/src/common/constants.ts`. Rate-limited submissions get `429` with a `retryAfterSeconds` field.
 
 Never ban by IP alone: many university users share the same public IP through NAT. The IP limit must be generous enough not to block a whole campus network.
 
@@ -244,10 +247,11 @@ Escape all user content before rendering. Never render it as raw HTML.
 
 Only internal users have accounts: `MODERATOR` and `HOST`. Participants never authenticate.
 
-- Passwords hashed with Argon2id (or bcrypt)
-- HTTP-only, secure cookies or short-lived JWT
+- Passwords hashed with Argon2id
+- A JWT (12 h) stored in an HTTP-only cookie (`mt_auth`): `Secure; SameSite=None` in production, since Vercel and Render are different sites. The guard also accepts `Authorization: Bearer` as a fallback (see [Open questions](#open-questions)).
+- The user and role are re-read from the database on every request, so deleting an account revokes access immediately
 - HTTPS everywhere
-- Socket connections are authenticated too
+- Socket connections are authenticated in a Socket.IO middleware with the same cookie
 
 Hiding a button in the frontend is **not** authorization. For every protected request, the backend checks:
 
@@ -341,6 +345,8 @@ Persistent Socket.IO connections are used by the moderator, host and presentatio
 | `moderator` | Moderator dashboard |
 | `host` | Host interface |
 | `presentation` | Presentation screen |
+
+The server assigns `moderator` or `host` from the authenticated user's role. The presentation screen is public and read-only: it asks for the `presentation` room in the handshake (`auth: { room: "presentation" }`) and only ever receives questions already on screen.
 
 ### Flows
 
@@ -440,9 +446,20 @@ GET    /moderator/event/status
 ### Host
 
 ```http
+GET   /host/question
 PATCH /host/questions/:id/approve
 PATCH /host/questions/:id/reject
 ```
+
+`GET /host/question` returns only the oldest `MODERATOR_APPROVED` question (or `null`), never the queue.
+
+### Presentation
+
+```http
+GET /presentation/current
+```
+
+Public. Returns the `DISPLAYED` question (content, display name, category) or `null`. Used on (re)connect.
 
 ### Health
 
@@ -558,25 +575,33 @@ hooks/
 
 ```text
 src/
-├── auth/
+├── auth/                  login/logout/me, JWT, argon2
 ├── questions/
 │   ├── dto/
-│   ├── questions.controller.ts
-│   ├── questions.service.ts
-│   ├── questions.gateway.ts
+│   ├── questions.controller.ts    POST /questions (participant)
+│   ├── moderator.controller.ts    /moderator/* (questions + event controls)
+│   ├── host.controller.ts         /host/*
+│   ├── presentation.controller.ts GET /presentation/current
+│   ├── questions.service.ts       the state machine + rate limits
+│   ├── question.views.ts          what each role may see
 │   └── questions.module.ts
+├── realtime/              Socket.IO gateway, rooms, event names
 ├── categories/
-├── event/
+├── event/                 single-row event state (pause/resume/end)
 ├── users/
 ├── health/
+├── prisma/
+├── config/                env validation
 ├── common/
 │   ├── guards/
 │   ├── decorators/
-│   ├── filters/
-│   ├── interceptors/
-│   └── pipes/
+│   └── utils/
+├── generated/prisma/      generated client (git-ignored)
+├── app.setup.ts           shared by main.ts and the e2e tests
 └── main.ts
 ```
+
+The gateway lives in its own `realtime/` module (instead of `questions.gateway.ts`) because both `questions/` and `event/` emit events, and a shared module avoids a circular dependency.
 
 ---
 
@@ -585,8 +610,9 @@ src/
 ### Render (backend)
 
 - Runtime: Node (Web Service)
-- Build: `npm ci && npm run build` (or `pnpm install --frozen-lockfile && pnpm build`)
-- Start: `npm run start:prod` (or `pnpm start:prod`)
+- Root directory: `backend` (a ready-made Blueprint is in `render.yaml`)
+- Build: `npm ci --include=dev && npm run build`. `--include=dev` is needed because `NODE_ENV=production` would otherwise skip the Nest CLI.
+- Start: `npm run start:prod` (runs `prisma migrate deploy`, then the server)
 - Listen on `process.env.PORT` and host `0.0.0.0`
 - Health check: `GET /health`
 - Implement graceful shutdown
@@ -611,7 +637,12 @@ CORS must allow the actual Vercel origin. Never use `*` for authenticated produc
 ```env
 NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com
 NEXT_PUBLIC_WS_URL=wss://your-render-service.onrender.com
+NEXT_PUBLIC_EVENT_NAME=MineTech
+NEXT_PUBLIC_CLUB_NAME=
+NEXT_PUBLIC_PARTICIPANT_URL=your-vercel-app.vercel.app
 ```
+
+`NEXT_PUBLIC_PARTICIPANT_URL` is shown on the idle presentation screen ("Ask your questions at …"). Vercel project root directory: `frontend`.
 
 Only `NEXT_PUBLIC_` variables reach the browser. Never put secrets there.
 
@@ -724,4 +755,4 @@ Only `NEXT_PUBLIC_` variables reach the browser. Never put secrets there.
 
 Decisions the spec does not settle yet:
 
-1. **Auth transport** — HTTP-only cookie session vs short-lived JWT. Cross-site cookies between Vercel and Render need `SameSite=None; Secure`, or a shared custom domain. Undecided; keep auth behind a guard so it can be swapped.
+1. **Auth transport** — implemented as a JWT in an HTTP-only `SameSite=None; Secure` cookie. Browsers that block third-party cookies (Safari by default, Chrome in some modes) may drop it because Vercel and Render are different sites. The fix is a shared custom domain (e.g. `qa.club.tld` + `api.club.tld`), or switching to the Bearer header the guard already accepts. **Test the moderator and host devices during rehearsal.**

@@ -1,0 +1,107 @@
+.page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: grid;
+  gap: 24px;
+}
+
+.header {
+  display: grid;
+  gap: 14px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.form {
+  display: grid;
+  gap: 22px;
+}
+
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.category {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 12px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
+  box-shadow: inset 2px 2px 0 var(--bevel-light), inset -2px -2px 0 var(--bevel-dark);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.category:hover {
+  background: #262834;
+}
+
+.category[data-selected="true"] {
+  border-color: var(--gold);
+  background: #2f2b1d;
+}
+
+.category:has(input:focus-visible) {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.confirmation {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+  padding: 36px 20px;
+}
+
+.confirmTitle {
+  font-size: 16px;
+}
+
+.confirmBlock {
+  width: 64px;
+  height: 64px;
+  background: url("/logo.svg") center / cover;
+  image-rendering: pixelated;
+  animation: place 360ms steps(3) both;
+}
+
+@keyframes place {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.footer {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-faint);
+}

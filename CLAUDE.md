@@ -8,19 +8,54 @@ Guidance for Claude Code when working in this repository.
 
 The full specification is in [docs/SPEC.md](docs/SPEC.md). Read it before implementing any feature, and check its **Open Questions** section before making a decision it doesn't settle. Ask instead of guessing on those.
 
-## Status
+## Layout
 
-Greenfield: no code yet. Follow the development order in SPEC.md §19 (backend foundation → participant → moderator → host → WebSockets → presentation → design → deployment).
-
-Planned layout (two apps, one repo):
+Two independent npm apps in one repo (no workspace tooling):
 
 ```text
-frontend/   Next.js + React + TypeScript (Vercel)
-backend/    NestJS + TypeScript + Socket.IO + Prisma (Render)
-docs/       Specification
+backend/             NestJS 12 (ESM) + Socket.IO + Prisma 7 + PostgreSQL → Render
+  prisma/            schema.prisma, migrations, seed.ts
+  src/questions/     state machine (questions.service.ts) + role controllers
+  src/realtime/      Socket.IO gateway, rooms, event names
+  test/              e2e tests (real Postgres + real Socket.IO clients)
+frontend/            Next.js 16 (App Router) + React 19 → Vercel
+  app/               routes: /, /login, /moderator, /host, /presentation
+  components/        participant/, moderator/, host/, presentation/, ui/
+  hooks/             useAuth, useSocket (reconnect + REST resync), useQuestions
+  lib/               api/, socket/, auth/, validation/, config.ts
+docker-compose.yml   local PostgreSQL (port 5433) + test database
+render.yaml          Render Blueprint for the backend
+docs/SPEC.md         specification
 ```
 
-Update this file with real build/test/lint commands once each app is scaffolded.
+## Commands
+
+```bash
+docker compose up -d                      # local Postgres (minetech + minetech_test)
+
+cd backend
+npm run start:dev                         # API on :4000 (needs backend/.env, see .env.example)
+npm run db:migrate                        # create/apply a migration after editing schema.prisma
+npm run db:seed                           # categories + SEED_* accounts (idempotent)
+npm run user:create -- <name> <MODERATOR|HOST>   # add/reset an account
+npm run lint && npm test && npm run test:e2e     # e2e needs the Docker DB running
+npm run build
+
+cd frontend
+npm run dev                               # http://localhost:3000 (needs frontend/.env.local)
+npm run lint && npm run typecheck && npm run build
+```
+
+Run the backend e2e suite after any change to questions, auth, event or realtime code. It covers every acceptance criterion in SPEC §20.
+
+## Codebase conventions
+
+- **Backend is ESM.** Relative imports need the `.js` extension (`'./questions.service.js'`). Avoid import cycles: decorator metadata breaks under ESM cycles (shared constants live in `src/common/constants.ts`).
+- **Prisma 7**: the client is generated into `backend/src/generated/prisma` (git-ignored, rebuilt by `postinstall`/`build`) and uses the `@prisma/adapter-pg` driver adapter. Run `npx prisma generate` after editing the schema. Constraints Prisma can't express (single `DISPLAYED` row, single-row `event_state`) are raw SQL in the init migration.
+- **Next.js 16 differs from older versions.** Read `frontend/AGENTS.md` and the bundled docs in `frontend/node_modules/next/dist/docs/` before using an unfamiliar API. The `react-hooks` lint rules forbid synchronous `setState` inside effects: set state in promise callbacks instead.
+- `socket.io` (backend) and `socket.io-client` (frontend) are pinned to the exact version `@nestjs/platform-socket.io` depends on. Upgrade them together.
+- Socket event names exist twice: `backend/src/realtime/realtime.events.ts` and `frontend/lib/socket/events.ts`. Keep them identical.
+- Frontend components treat socket events as "refetch now" signals (the presentation applies `QUESTION_DISPLAYED` payloads directly for speed). Never patch local state in a way that can drift from the DB.
 
 ## Non-negotiable rules
 
@@ -30,7 +65,7 @@ Update this file with real build/test/lint commands once each app is scaffolded.
 4. **Never report success on failure.** If the DB write fails, the participant gets an error, not a confirmation.
 5. **Validate on the server.** Question 10–500 chars, display name ≤ 50, category from allowlist, reject unknown fields (`whitelist` + `forbidNonWhitelisted` in Nest's `ValidationPipe`).
 6. **Escape user content.** Never use `dangerouslySetInnerHTML` for questions or names.
-7. **Rate limit by session *and* IP**, never by IP alone (campus NAT). Session: 1 per 10–15 s, max 5 per 30 min.
+7. **Rate limit by session *and* IP**, never by IP alone (campus NAT). Session limits (1 per 12 s, max 5 per 30 min) are checked against the DB under a per-session advisory lock; values are in `backend/src/common/constants.ts`.
 8. **Clients must survive reconnects.** On socket (re)connect: authenticate → fetch current state via REST → replace UI state. Never assume every event arrived.
 
 ## Question state machine
@@ -49,7 +84,7 @@ REJECTED        REJECTED
 - The moderator dashboard shows the **previous question** (most recently answered).
 - `source` (`PRE_EVENT`/`LIVE`) is informational only, derived from `EVENT_STARTS_AT`.
 - Set the matching timestamp column (`moderator_approved_at`, `host_rejected_at`, …) on every transition.
-- Auth transport (cookie vs JWT) is undecided. Keep it behind a Nest guard so it can be swapped.
+- Auth: JWT in an HTTP-only cookie (`mt_auth`), Bearer header accepted as a fallback, all in `src/common/guards/auth.guard.ts`. The transport is still an open question (third-party cookie blocking): keep it isolated in the guard and the socket middleware.
 
 ## Role boundaries
 
@@ -77,9 +112,14 @@ Single event, single backend instance. Do **not** introduce Redis, message queue
 
 - Backend listens on `process.env.PORT` and `0.0.0.0`, exposes `GET /health`, and shuts down gracefully (`app.enableShutdownHooks()`).
 - CORS: the exact Vercel origin from `CORS_ORIGIN`, never `*`, with credentials enabled.
-- Frontend only reads `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL`. Never put secrets in `NEXT_PUBLIC_*`.
-- Passwords: Argon2id (or bcrypt). Cookies: HTTP-only, `Secure`, and `SameSite=None` if frontend and backend are on different sites.
+- Frontend reads only `NEXT_PUBLIC_*` variables (API/WS URLs, event/club name, participant URL). Never put secrets there.
+- Render build must be `npm ci --include=dev && npm run build` (the Nest CLI is a dev dependency).
+- Passwords: Argon2id. Cookies: HTTP-only; `Secure` + `SameSite=None` in production (different sites), `Lax` in development.
 
 ## Design
 
 Minecraft-inspired: pixel/block UI, club logo, event marketing assets. The participant page is mobile-first. The presentation page must be readable from the back of a lecture hall on a projector.
+
+- Theme tokens and block primitives (`.btn`, `.panel`, `.input`, `.alert`) are in `frontend/app/globals.css`; page styles are CSS modules next to their components.
+- Fonts: Press Start 2P (headings/wordmark only) and Pixelify Sans (everything else). Ligatures are disabled globally because Pixelify's "fi" reads as "A".
+- `frontend/public/logo.svg` (and `app/icon.svg`) is a placeholder grass block: replace it with the club logo.

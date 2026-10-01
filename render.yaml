@@ -1,0 +1,25 @@
+# Render Blueprint for the MineTech API (SPEC §17).
+# Secrets are marked `sync: false`: Render asks for them when the Blueprint is created.
+services:
+  - type: web
+    name: minetech-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    # --include=dev: the Nest CLI is a dev dependency and NODE_ENV=production
+    # would otherwise make `npm ci` skip it.
+    buildCommand: npm ci --include=dev && npm run build
+    # Applies pending migrations, then starts the API on $PORT / 0.0.0.0.
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
+      - key: EVENT_STARTS_AT
+        sync: false

@@ -2,7 +2,7 @@
 
 A live Q&A platform for the club's university tech event. Students send questions from their phones before or during the talks. A moderator filters them, the host approves them, and the chosen question appears on the projector in real time.
 
-> **Status:** early development. The specification is complete, and the code is not written yet.
+> **Status:** feature-complete for the first event. Backend and frontend are built and tested; next steps are deployment and a full rehearsal (see the event-day checklist in [docs/SPEC.md](docs/SPEC.md#21-event-day-checklist)).
 
 ## How it works
 
@@ -22,21 +22,21 @@ Student submits ──► Moderator approves ──► Host approves ──► M
 
 | Part | Technology | Hosting |
 | --- | --- | --- |
-| Frontend | Next.js, React, TypeScript | Vercel |
-| Backend | NestJS, TypeScript, Socket.IO | Render |
-| Database | PostgreSQL (via Prisma) | — |
+| Frontend | Next.js 16, React 19, TypeScript | Vercel |
+| Backend | NestJS 12, TypeScript, Socket.IO | Render |
+| Database | PostgreSQL 17 (via Prisma 7) | Any managed PostgreSQL |
 
 PostgreSQL holds all state. Socket.IO only pushes updates to the moderator, host, and presentation screens, and every screen re-syncs from the database after a reconnect.
 
 ## Repository layout
 
 ```text
-frontend/   Next.js app: participant, login, moderator, host, presentation pages
-backend/    NestJS API: REST, Socket.IO, auth, rate limiting
-docs/       Project specification
+frontend/            Next.js app: participant, login, moderator, host, presentation pages
+backend/             NestJS API: REST, Socket.IO, auth, rate limiting, Prisma schema
+docker-compose.yml   Local PostgreSQL for development and tests
+render.yaml          Render Blueprint for the backend
+docs/                Project specification
 ```
-
-`frontend/` and `backend/` will be added as development starts.
 
 ## Pages
 
@@ -48,34 +48,89 @@ docs/       Project specification
 | `/host` | Host | Approve or reject the current question |
 | `/presentation` | Projector | Full-screen question display |
 
-## Configuration
+## Getting started
 
-**Backend** (Render):
+Prerequisites: Node.js 22+ and Docker (for the local database).
+
+```bash
+# 1. Database (PostgreSQL on localhost:5433, plus a separate test database)
+docker compose up -d
+
+# 2. Backend → http://localhost:4000
+cd backend
+cp .env.example .env        # then set JWT_SECRET and the SEED_* passwords
+npm install
+npx prisma migrate deploy
+npm run db:seed             # categories + moderator/host accounts from SEED_*
+npm run start:dev
+
+# 3. Frontend → http://localhost:3000 (in another terminal)
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Then open:
+
+- http://localhost:3000: participant page (try it with your phone's screen size)
+- http://localhost:3000/login: sign in with the `SEED_MODERATOR_*` or `SEED_HOST_*` credentials
+- http://localhost:3000/presentation: projector view (double-click or press **F** for fullscreen)
+
+Add or reset an account at any time (e.g. backup credentials for event day):
+
+```bash
+cd backend && npm run user:create -- backup-mod MODERATOR
+```
+
+## Tests
+
+```bash
+cd backend
+npm run lint
+npm test            # unit tests
+npm run test:e2e    # full workflow + security, against the Docker test database
+
+cd frontend
+npm run lint && npm run typecheck && npm run build
+```
+
+The backend e2e suite drives the real API and real Socket.IO clients through every acceptance criterion in the spec: the main flow, rejections never leaking to the host or projector, rate limits, validation, role checks, pause/resume/end, and concurrent clicks.
+
+## Deployment
+
+**Backend on Render.** Create a PostgreSQL database, then a Blueprint from `render.yaml` (or a Web Service with root directory `backend`, build `npm ci --include=dev && npm run build`, start `npm run start:prod`, health check `/health`). Migrations run automatically on start. Seed once from your machine, passing real passwords inline so the dev ones in `.env` aren't used:
+
+```bash
+cd backend
+DATABASE_URL='<render external db url>' SEED_MODERATOR_PASSWORD='…' SEED_HOST_PASSWORD='…' npm run db:seed
+```
 
 ```env
 NODE_ENV=production
-PORT=10000
 DATABASE_URL=postgresql://...
-JWT_SECRET=...
+JWT_SECRET=...                      # long random string
 CORS_ORIGIN=https://your-vercel-app.vercel.app
 EVENT_STARTS_AT=2026-11-15T14:00:00+01:00
 ```
 
-**Frontend** (Vercel):
+**Frontend on Vercel.** Import the repo with root directory `frontend`.
 
 ```env
 NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com
 NEXT_PUBLIC_WS_URL=wss://your-render-service.onrender.com
+NEXT_PUBLIC_EVENT_NAME=MineTech
+NEXT_PUBLIC_CLUB_NAME=Your Club
+NEXT_PUBLIC_PARTICIPANT_URL=your-vercel-app.vercel.app
 ```
 
 Never put secrets in `NEXT_PUBLIC_*` variables. They are visible in the browser.
 
-## Getting started
+> **Rehearse on the real devices.** Login uses a cookie set by the Render domain. Browsers that block third-party cookies (Safari by default) can refuse it. If moderator or host login loops back to `/login`, put both apps on one custom domain (e.g. `qa.club.tld` and `api.club.tld`). See the open question in the spec.
 
-Setup instructions will be added once the apps are set up. Prerequisites:
+## Branding
 
-- Node.js (LTS)
-- PostgreSQL
+Replace `frontend/public/logo.svg` and `frontend/app/icon.svg` with the club logo (square works best). The event name, club name, and participant URL come from the `NEXT_PUBLIC_*` variables above.
 
 ## Documentation
 

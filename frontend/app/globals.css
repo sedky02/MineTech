@@ -1,0 +1,295 @@
+/* MineTech — Minecraft-inspired theme (night-time deepslate, block bevels). */
+
+:root {
+  --bg: #14151b;
+  --bg-raised: #1c1e27;
+  --panel: #2a2c37;
+  --panel-inset: #0f1014;
+  --outline: #050506;
+  --bevel-light: rgba(255, 255, 255, 0.16);
+  --bevel-dark: rgba(0, 0, 0, 0.5);
+
+  --text: #f3f3f0;
+  --text-dim: #a8aab8;
+  --text-faint: #6d7080;
+
+  --grass: #5fa83a;
+  --grass-dark: #3f7d24;
+  --dirt: #8a5a3b;
+  --stone: #737373;
+  --stone-dark: #4f4f4f;
+  --diamond: #4ee2ec;
+  --gold: #f5c542;
+  --redstone: #d9412e;
+  --redstone-dark: #9c2a1c;
+  --lapis: #3a63c9;
+  --emerald: #2fbf71;
+  --iron: #cfcfcf;
+  --amethyst: #9a5cd6;
+
+  --pixel: 4px;
+  --radius: 0;
+  --font-display: var(--font-press-start), "Courier New", monospace;
+  --font-body: var(--font-pixelify), system-ui, sans-serif;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  /* Faint block grid, like looking at a wall of deepslate. */
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 2px, transparent 2px);
+  background-size: 48px 48px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  /* Pixelify Sans' "fi" ligature reads like "A" ("first" -> "Arst"). */
+  font-variant-ligatures: none;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.4;
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.panel {
+  background: var(--panel);
+  border: var(--pixel) solid var(--outline);
+  box-shadow:
+    inset var(--pixel) var(--pixel) 0 var(--bevel-light),
+    inset calc(var(--pixel) * -1) calc(var(--pixel) * -1) 0 var(--bevel-dark);
+  padding: 20px;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.btn {
+  --btn-bg: var(--stone);
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 18px;
+  background: var(--btn-bg);
+  color: #fff;
+  border: 3px solid var(--outline);
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.28),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.38);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  user-select: none;
+  transition: filter 80ms;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.btn:active:not(:disabled) {
+  box-shadow:
+    inset -3px -3px 0 rgba(255, 255, 255, 0.2),
+    inset 3px 3px 0 rgba(0, 0, 0, 0.4);
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7) brightness(0.7);
+}
+
+.btn-primary {
+  --btn-bg: var(--grass);
+}
+.btn-danger {
+  --btn-bg: var(--redstone);
+}
+.btn-gold {
+  --btn-bg: #c99a1d;
+}
+.btn-lapis {
+  --btn-bg: var(--lapis);
+}
+.btn-ghost {
+  --btn-bg: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text-dim);
+  text-shadow: none;
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.btn-sm {
+  min-height: 34px;
+  padding: 4px 12px;
+  font-size: 15px;
+}
+
+.btn-lg {
+  min-height: 64px;
+  padding: 12px 28px;
+  font-size: 22px;
+}
+
+/* ---------------------------------------------------------------- fields */
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field-label {
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-hint {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 15px;
+}
+
+.input {
+  width: 100%;
+  background: var(--panel-inset);
+  border: 3px solid var(--outline);
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.6);
+  padding: 12px 14px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 140px;
+}
+
+/* ---------------------------------------------------------------- alerts */
+
+.alert {
+  border: 3px solid var(--outline);
+  padding: 12px 14px;
+  background: var(--bg-raised);
+  border-left: 8px solid var(--gold);
+}
+
+.alert-error {
+  border-left-color: var(--redstone);
+}
+
+.alert-success {
+  border-left-color: var(--grass);
+}
+
+/* ------------------------------------------------------------ utilities */
+
+.muted {
+  color: var(--text-dim);
+}
+
+.center-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------- login */
+
+.login-shell {
+  width: min(100%, 400px);
+  display: grid;
+  gap: 24px;
+}
+
+.login-form {
+  display: grid;
+  gap: 18px;
+}

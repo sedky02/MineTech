@@ -1,0 +1,90 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MODERATOR
+  HOST
+}
+
+enum QuestionStatus {
+  PENDING
+  MODERATOR_APPROVED
+  REJECTED
+  HOST_APPROVED
+  DISPLAYED
+  ANSWERED
+}
+
+enum QuestionSource {
+  PRE_EVENT
+  LIVE
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Category {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String
+  slug         String     @unique
+  displayOrder Int        @map("display_order")
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  questions    Question[]
+
+  @@map("categories")
+}
+
+model Question {
+  id                   String         @id @default(uuid()) @db.Uuid
+  categoryId           String         @map("category_id") @db.Uuid
+  category             Category       @relation(fields: [categoryId], references: [id])
+  content              String         @db.VarChar(500)
+  displayName          String?        @map("display_name") @db.VarChar(50)
+  participantSessionId String         @map("participant_session_id") @db.Uuid
+  source               QuestionSource
+  status               QuestionStatus @default(PENDING)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  moderatorApprovedAt DateTime? @map("moderator_approved_at")
+  moderatorRejectedAt DateTime? @map("moderator_rejected_at")
+
+  hostApprovedAt DateTime? @map("host_approved_at")
+  hostRejectedAt DateTime? @map("host_rejected_at")
+
+  displayedAt DateTime? @map("displayed_at")
+  answeredAt  DateTime? @map("answered_at")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([participantSessionId, createdAt])
+  @@map("questions")
+}
+
+// Single-row table (id is always 1) holding global event state.
+model EventState {
+  id               Int       @id @default(1)
+  submissionsOpen  Boolean   @default(true) @map("submissions_open")
+  endedAt          DateTime? @map("ended_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@map("event_state")
+}

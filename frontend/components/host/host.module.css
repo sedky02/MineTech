@@ -1,0 +1,68 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+.idle {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.idleText {
+  font-family: var(--font-display);
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+.question {
+  width: 100%;
+  display: grid;
+  gap: 16px;
+  animation: appear 240ms steps(3) both;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.text {
+  margin: 0;
+  font-size: clamp(22px, 4vw, 34px);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.author {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}

@@ -1,0 +1,109 @@
+.logo {
+  image-rendering: pixelated;
+  display: block;
+  flex-shrink: 0;
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wordmarkTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text);
+  text-shadow: 3px 3px 0 var(--outline);
+}
+
+.wordmarkSubtitle {
+  margin-top: 6px;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+.swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  border: 2px solid var(--outline);
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.35), inset -2px -2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.tagLarge {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(14px, 1.6vw, 26px);
+  gap: 14px;
+  color: var(--text);
+}
+
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.connectionDot {
+  width: 10px;
+  height: 10px;
+  background: var(--gold);
+  border: 2px solid var(--outline);
+}
+
+.connection[data-status="connected"] .connectionDot {
+  background: var(--emerald);
+}
+
+.connection[data-status="unauthorized"] .connectionDot {
+  background: var(--redstone);
+}
+
+.connection[data-status="reconnecting"] .connectionDot,
+.connection[data-status="connecting"] .connectionDot {
+  animation: blink 1s steps(2) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.loading {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.loading img {
+  animation: bob 1.2s steps(4) infinite;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.message {
+  max-width: 440px;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.messageTitle {
+  font-size: 16px;
+}

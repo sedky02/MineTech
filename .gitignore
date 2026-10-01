@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env*.local
+!.env.example
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+.DS_Store
+.vercel
+
+# Generated Prisma client (rebuilt by `prisma generate`)
+backend/src/generated/
