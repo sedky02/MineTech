@@ -1,24 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
 import { ConnectionBadge } from "@/components/ui/ConnectionBadge";
 import { Wordmark } from "@/components/ui/Logo";
 import { LoadingScreen, MessageScreen } from "@/components/ui/StatusScreens";
 import { useAuth } from "@/hooks/useAuth";
-import { useModeratorQuestions } from "@/hooks/useQuestions";
+import { type QueueColumn, useModeratorQuestions } from "@/hooks/useQuestions";
 import { ApiError } from "@/lib/api/client";
-import { type ModeratorAction, moderatorApi } from "@/lib/api/endpoints";
+import { type ModeratorAction, moderatorApi, publicApi } from "@/lib/api/endpoints";
+import type { Category, ModeratorQuestion } from "@/lib/api/types";
+import { ALL_CATEGORIES, CategoryFilter } from "./CategoryFilter";
 import { EventControls } from "./EventControls";
 import { Author, QuestionCard, formatTime } from "./QuestionCard";
+import { SortableList } from "./SortableList";
 import styles from "./moderator.module.css";
 
 export function Dashboard() {
   const auth = useAuth("MODERATOR");
-  const { dashboard, eventStatus, error, refresh, connection } = useModeratorQuestions(auth.status === "ready");
+  const { dashboard, eventStatus, error, refresh, connection, reorderLocally } = useModeratorQuestions(
+    auth.status === "ready",
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
+
+  useEffect(() => {
+    publicApi.categories().then(setCategories, () => undefined);
+  }, []);
 
   async function run(key: string, action: () => Promise<unknown>) {
     setBusy(key);
@@ -40,6 +51,12 @@ export function Dashboard() {
   }
 
   const act = (id: string, action: ModeratorAction) => run(`${id}:${action}`, () => moderatorApi.act(id, action));
+
+  /** Drag-and-drop priority: show the new order at once, then save it. */
+  const reorder = (column: QueueColumn, orderedIds: string[]) => {
+    reorderLocally(column, orderedIds);
+    void run(`reorder:${column}`, () => moderatorApi.reorder(orderedIds));
+  };
 
   if (auth.status === "loading") return <LoadingScreen />;
   if (auth.status === "error") {
@@ -71,6 +88,13 @@ export function Dashboard() {
   if (!dashboard) return <LoadingScreen label={error ?? "Loading questions…"} />;
 
   const { pending, awaitingHost, ready, displayed, previous } = dashboard;
+  const queued = [...pending, ...awaitingHost, ...ready];
+  const counts: Record<string, number> = {};
+  for (const q of queued) counts[q.category.slug] = (counts[q.category.slug] ?? 0) + 1;
+  const visible = (list: ModeratorQuestion[]) =>
+    categoryFilter === ALL_CATEGORIES ? list : list.filter((q) => q.category.slug === categoryFilter);
+  const shown = { pending: visible(pending), awaitingHost: visible(awaitingHost), ready: visible(ready) };
+  const hostCurrentId = awaitingHost[0]?.id;
 
   return (
     <div className={styles.page}>
@@ -159,42 +183,84 @@ export function Dashboard() {
         </div>
       </section>
 
+      <CategoryFilter
+        categories={categories}
+        counts={counts}
+        total={queued.length}
+        selected={categoryFilter}
+        onSelect={setCategoryFilter}
+      />
+
       <section className={styles.columns}>
-        <Column title="Pending review" count={pending.length} empty="No new questions.">
-          {pending.map((q) => (
-            <QuestionCard key={q.id} question={q}>
-              <button className="btn btn-sm btn-primary" onClick={() => act(q.id, "approve")} disabled={busy !== null}>
-                Approve
-              </button>
-              <button className="btn btn-sm btn-danger" onClick={() => act(q.id, "reject")} disabled={busy !== null}>
-                Reject
-              </button>
-            </QuestionCard>
-          ))}
+        <Column
+          title="Pending review"
+          count={shown.pending.length}
+          total={pending.length}
+          empty={pending.length ? "No questions in this category." : "No new questions."}
+        >
+          <SortableList
+            items={shown.pending}
+            disabled={busy !== null}
+            onReorder={(ids) => reorder("pending", ids)}
+            renderItem={(q, controls) => (
+              <QuestionCard question={q} controls={controls}>
+                <button className="btn btn-sm btn-primary" onClick={() => act(q.id, "approve")} disabled={busy !== null}>
+                  Approve
+                </button>
+                <button className="btn btn-sm btn-danger" onClick={() => act(q.id, "reject")} disabled={busy !== null}>
+                  Reject
+                </button>
+              </QuestionCard>
+            )}
+          />
         </Column>
 
-        <Column title="Waiting for host" count={awaitingHost.length} empty="Nothing waiting for the host.">
-          {awaitingHost.map((q, index) => (
-            <QuestionCard
-              key={q.id}
-              question={q}
-              note={index === 0 ? "The host is seeing this one now" : `Queued #${index + 1}`}
-            >
-              <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={busy !== null}>
-                Display now (skip host)
-              </button>
-            </QuestionCard>
-          ))}
+        <Column
+          title="Waiting for host"
+          count={shown.awaitingHost.length}
+          total={awaitingHost.length}
+          empty={awaitingHost.length ? "No questions in this category." : "Nothing waiting for the host."}
+        >
+          <SortableList
+            items={shown.awaitingHost}
+            disabled={busy !== null}
+            onReorder={(ids) => reorder("awaitingHost", ids)}
+            renderItem={(q, controls) => (
+              <QuestionCard
+                question={q}
+                controls={controls}
+                note={
+                  q.id === hostCurrentId
+                    ? "The host is seeing this one now"
+                    : `Queued #${awaitingHost.findIndex((other) => other.id === q.id) + 1}`
+                }
+              >
+                <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={busy !== null}>
+                  Display now (skip host)
+                </button>
+              </QuestionCard>
+            )}
+          />
         </Column>
 
-        <Column title="Ready to display" count={ready.length} empty="Approve questions to fill this list.">
-          {ready.map((q) => (
-            <QuestionCard key={q.id} question={q}>
-              <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={busy !== null}>
-                {displayed ? "Display (answers current)" : "Display"}
-              </button>
-            </QuestionCard>
-          ))}
+        <Column
+          title="Ready to display"
+          count={shown.ready.length}
+          total={ready.length}
+          empty={ready.length ? "No questions in this category." : "Approve questions to fill this list."}
+        >
+          <SortableList
+            items={shown.ready}
+            disabled={busy !== null}
+            onReorder={(ids) => reorder("ready", ids)}
+            renderItem={(q, controls) => (
+              <QuestionCard question={q} controls={controls}>
+                <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={busy !== null}>
+                  {displayed ? "Display (answers current)" : "Display"}
+                </button>
+              </QuestionCard>
+            )}
+          />
         </Column>
       </section>
     </div>
@@ -204,18 +270,24 @@ export function Dashboard() {
 function Column({
   title,
   count,
+  total,
   empty,
   children,
 }: {
   title: string;
   count: number;
+  total: number;
   empty: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={`panel ${styles.column}`}>
       <h2 className="panel-title">
-        {title} <span className={styles.count}>{count}</span>
+        {title}
+        <span className={styles.count}>
+          {count}
+          {count !== total && <span className={styles.totalCount}>/{total}</span>}
+        </span>
       </h2>
       <div className={styles.list}>{count === 0 ? <p className="muted">{empty}</p> : children}</div>
     </div>

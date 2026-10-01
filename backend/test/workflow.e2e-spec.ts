@@ -334,6 +334,87 @@ describe('Question workflow (SPEC §4, §20)', () => {
     });
   });
 
+  describe('reordering (drag and drop priority)', () => {
+    const reorder = (ids: string[]) =>
+      mod('patch', '/moderator/questions/reorder').send({ ids });
+
+    it('reorders the ready list and keeps the order', async () => {
+      const a = await toHostApproved('Ready A?');
+      const b = await toHostApproved('Ready B?');
+      const c = await toHostApproved('Ready C?');
+      const r = await rooms();
+
+      await reorder([c, a, b]).expect(200);
+      expect(await r.moderator.waitFor('QUESTION_REORDERED')).toEqual({
+        status: 'HOST_APPROVED',
+      });
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.ready.map((q: any) => q.id)).toEqual([c, a, b]);
+    });
+
+    it('changes which question the host sees next', async () => {
+      const first = await createQuestion('Host first?');
+      const second = await createQuestion('Host second?');
+      await mod('patch', `/moderator/questions/${first}/approve`).expect(200);
+      await mod('patch', `/moderator/questions/${second}/approve`).expect(200);
+      expect((await host('get', '/host/question')).body.question.id).toBe(
+        first,
+      );
+      const r = await rooms();
+
+      await reorder([second, first]).expect(200);
+      await r.host.waitFor('QUESTION_REORDERED');
+      expect((await host('get', '/host/question')).body.question.id).toBe(
+        second,
+      );
+    });
+
+    it('only swaps the given questions, leaving the others in place', async () => {
+      const ids = [];
+      for (const label of ['A', 'B', 'C', 'D']) {
+        ids.push(await toHostApproved(`Partial ${label}?`));
+      }
+      const [a, b, c, d] = ids;
+      // e.g. a category filter showed only B and D
+      await reorder([d, b]).expect(200);
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.ready.map((q: any) => q.id)).toEqual([a, d, c, b]);
+    });
+
+    it('puts questions that enter a list at the end', async () => {
+      const a = await toHostApproved('Old A?');
+      const b = await toHostApproved('Old B?');
+      await reorder([b, a]).expect(200);
+      const c = await toHostApproved('New C?');
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.ready.map((q: any) => q.id)).toEqual([b, a, c]);
+    });
+
+    it('rejects questions from different lists, unknown ids and bad input', async () => {
+      const pending = await createQuestion('Still pending?');
+      const ready = await toHostApproved('Already ready?');
+      await reorder([pending, ready]).expect(409);
+      await reorder([ready, '00000000-0000-4000-8000-000000000000']).expect(
+        404,
+      );
+      await reorder([ready, ready]).expect(400);
+      await reorder([ready]).expect(400);
+      await reorder(['not-a-uuid', ready]).expect(400);
+      await host('patch', '/moderator/questions/reorder')
+        .send({ ids: [pending, ready] })
+        .expect(403);
+    });
+
+    it('does not reorder questions on screen or answered', async () => {
+      const a = await toHostApproved('Shown A?');
+      const b = await toHostApproved('Shown B?');
+      await mod('patch', `/moderator/questions/${a}/display`).expect(200);
+      await mod('patch', `/moderator/questions/${b}/display`).expect(200);
+      // a is ANSWERED, b is DISPLAYED
+      await reorder([b, a]).expect(409);
+    });
+  });
+
   it('applies a double click only once', async () => {
     const id = await createQuestion();
     const results = await Promise.all([

@@ -1,10 +1,18 @@
-import { Controller, Get, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+} from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Auth } from '../common/decorators/auth.decorator.js';
 import { Role } from '../generated/prisma/enums.js';
 import { EventService } from '../event/event.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
 import { Room, SocketEvent } from '../realtime/realtime.events.js';
+import { ReorderQuestionsDto } from './dto/reorder-questions.dto.js';
 import { QuestionsService } from './questions.service.js';
 
 @Controller('moderator')
@@ -21,6 +29,12 @@ export class ModeratorController {
   @Get('questions')
   dashboard() {
     return this.questions.moderatorDashboard();
+  }
+
+  /** Drag-and-drop priority within one list (pending, waiting for host, ready). */
+  @Patch('questions/reorder')
+  reorder(@Body() dto: ReorderQuestionsDto) {
+    return this.questions.reorder(dto.ids);
   }
 
   @Patch('questions/:id/approve')

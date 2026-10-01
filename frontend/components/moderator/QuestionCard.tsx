@@ -24,10 +24,13 @@ export function QuestionCard({
   question,
   children,
   note,
+  controls,
 }: {
   question: ModeratorQuestion;
   children?: React.ReactNode;
   note?: string;
+  /** Reorder controls, shown at the end of the action row. */
+  controls?: React.ReactNode;
 }) {
   return (
     <article className={styles.card}>
@@ -35,7 +38,12 @@ export function QuestionCard({
       <p className={styles.content}>{question.content}</p>
       <Author name={question.displayName} />
       {note && <p className={styles.note}>{note}</p>}
-      {children && <div className={styles.actions}>{children}</div>}
+      {(children || controls) && (
+        <div className={styles.actions}>
+          {children}
+          {controls}
+        </div>
+      )}
     </article>
   );
 }

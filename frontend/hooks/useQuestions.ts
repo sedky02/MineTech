@@ -2,10 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { moderatorApi } from "@/lib/api/endpoints";
-import type { EventStatus, ModeratorDashboard } from "@/lib/api/types";
+import type { EventStatus, ModeratorDashboard, ModeratorQuestion } from "@/lib/api/types";
 import { useSocket } from "./useSocket";
 
 const EVENT_DEBOUNCE_MS = 80;
+
+export type QueueColumn = "pending" | "awaitingHost" | "ready";
+
+/**
+ * Mirrors the server's reorder rule: the given questions swap the slots they
+ * already occupy, everything else stays put (e.g. questions hidden by a filter).
+ */
+export function applySubsetOrder(list: ModeratorQuestion[], orderedIds: string[]): ModeratorQuestion[] {
+  const moving = new Set(orderedIds);
+  const byId = new Map(list.map((q) => [q.id, q]));
+  let next = 0;
+  return list.map((q) => (moving.has(q.id) ? (byId.get(orderedIds[next++]) ?? q) : q));
+}
 
 /**
  * Moderator dashboard state. Socket events are treated as "something
@@ -44,5 +57,12 @@ export function useModeratorQuestions(enabled: boolean) {
 
   const connection = useSocket({ kind: "internal", enabled, onSync: refresh, onEvent: scheduleRefresh });
 
-  return { dashboard, eventStatus, error, refresh, connection };
+  /** Optimistic local reorder; the following refresh replaces it with the server's order. */
+  const reorderLocally = useCallback((column: QueueColumn, orderedIds: string[]) => {
+    setDashboard((current) =>
+      current ? { ...current, [column]: applySubsetOrder(current[column], orderedIds) } : current,
+    );
+  }, []);
+
+  return { dashboard, eventStatus, error, refresh, connection, reorderLocally };
 }

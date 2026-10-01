@@ -184,3 +184,116 @@
     max-height: none;
   }
 }
+
+/* ------------------------------------------------------- category filter */
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 12px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
+  box-shadow: inset 2px 2px 0 var(--bevel-light), inset -2px -2px 0 var(--bevel-dark);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.filterChip:hover {
+  background: #262834;
+}
+
+.filterChip[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: #2f2b1d;
+}
+
+.filterCount {
+  min-width: 22px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 13px;
+  background: var(--panel-inset);
+  border: 2px solid var(--outline);
+}
+
+/* ------------------------------------------------------- drag and drop */
+
+.sortItem {
+  position: relative;
+}
+
+.sortItem[draggable="true"] {
+  cursor: grab;
+}
+
+.sortItem[data-dragging="true"] {
+  opacity: 0.4;
+}
+
+.sortItem[data-drop="before"]::before,
+.sortItem[data-drop="after"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gold);
+  box-shadow: 0 0 0 2px var(--outline);
+}
+
+.sortItem[data-drop="before"]::before {
+  top: -7px;
+}
+
+.sortItem[data-drop="after"]::after {
+  bottom: -7px;
+}
+
+.sortControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.dragHandle {
+  color: var(--text-faint);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.sortButton {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  border: 2px solid var(--outline);
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.sortButton:hover:not(:disabled) {
+  color: var(--text);
+  background: #343744;
+}
+
+.sortButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.totalCount {
+  color: var(--text-faint);
+  font-size: 12px;
+}

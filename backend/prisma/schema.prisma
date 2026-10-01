@@ -60,6 +60,10 @@ model Question {
   participantSessionId String         @map("participant_session_id") @db.Uuid
   source               QuestionSource
   status               QuestionStatus @default(PENDING)
+  /// Order within the question's current list (lower = first). Set to the
+  /// current time when a question enters a list; moderators reorder by
+  /// swapping positions.
+  position             Float          @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -74,7 +78,7 @@ model Question {
 
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([status])
+  @@index([status, position])
   @@index([participantSessionId, createdAt])
   @@map("questions")
 }

@@ -79,6 +79,7 @@ REJECTED        REJECTED
 
 - Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `MODERATOR_APPROVED → DISPLAYED` (skip the host), `DISPLAYED → ANSWERED`, `DISPLAYED → back where it came from` (remove), `latest ANSWERED → DISPLAYED` (rollback).
 - "Back where it came from" = `HOST_APPROVED` if `host_approved_at` is set, else `MODERATOR_APPROVED` (host queue). Remove and rollback both use this (`statusBeforeDisplay` in the questions service).
+- Lists are ordered by `position` (then `created_at`). Entering a list sets `position` to the current time (end of list); `PATCH /moderator/questions/reorder` permutes the positions of the given ids only. The host sees the first `MODERATOR_APPROVED` by position. The frontend mirrors this rule for optimistic updates (`applySubsetOrder` in `hooks/useQuestions.ts`).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.
 - At most one question is `DISPLAYED` at a time. Displaying a new question auto-marks the current one `ANSWERED`, in the same transaction.
 - Remove, answer, "clear display" and "end event" all leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question. End event also closes submissions for good.

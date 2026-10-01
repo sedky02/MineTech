@@ -28,6 +28,18 @@ import {
 
 type Tx = Prisma.TransactionClient;
 
+/** Lists the moderator can reorder (SPEC §5). */
+const REORDERABLE: QuestionStatus[] = [
+  QuestionStatus.PENDING,
+  QuestionStatus.MODERATOR_APPROVED,
+  QuestionStatus.HOST_APPROVED,
+];
+
+const listOrder: Prisma.QuestionOrderByWithRelationInput[] = [
+  { position: 'asc' },
+  { createdAt: 'asc' },
+];
+
 interface DisplayChange {
   /** Was on screen and is now answered. */
   answered: QuestionWithCategory | null;
@@ -99,6 +111,7 @@ export class QuestionsService {
               ? QuestionSource.PRE_EVENT
               : QuestionSource.LIVE,
           createdAt: now,
+          position: now.getTime(),
         },
         include: withCategory,
       });
@@ -146,6 +159,7 @@ export class QuestionsService {
       {
         status: QuestionStatus.MODERATOR_APPROVED,
         moderatorApprovedAt: new Date(),
+        position: Date.now(),
       },
     );
     this.realtime.emit(
@@ -306,23 +320,18 @@ export class QuestionsService {
   }
 
   async moderatorDashboard() {
-    const byStatus = (
-      status: QuestionStatus,
-      orderBy: Prisma.QuestionOrderByWithRelationInput,
-    ) =>
+    const byStatus = (status: QuestionStatus) =>
       this.prisma.question.findMany({
         where: { status },
-        orderBy,
+        orderBy: listOrder,
         include: withCategory,
       });
 
     const [pending, awaitingHost, ready, displayed, previous] =
       await Promise.all([
-        byStatus(QuestionStatus.PENDING, { createdAt: 'asc' }),
-        byStatus(QuestionStatus.MODERATOR_APPROVED, {
-          moderatorApprovedAt: 'asc',
-        }),
-        byStatus(QuestionStatus.HOST_APPROVED, { hostApprovedAt: 'asc' }),
+        byStatus(QuestionStatus.PENDING),
+        byStatus(QuestionStatus.MODERATOR_APPROVED),
+        byStatus(QuestionStatus.HOST_APPROVED),
         this.prisma.question.findFirst({
           where: { status: QuestionStatus.DISPLAYED },
           include: withCategory,
@@ -343,13 +352,63 @@ export class QuestionsService {
     };
   }
 
+  /**
+   * Reorders questions within one list. The given questions swap their
+   * existing positions, so questions left out (e.g. hidden by a filter) and
+   * questions arriving meanwhile keep their place.
+   */
+  async reorder(ids: string[]) {
+    const status = await this.prisma.$transaction(async (tx) => {
+      const rows = await tx.question.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, status: true, position: true },
+      });
+      if (rows.length !== ids.length) {
+        throw new NotFoundException('Some questions no longer exist');
+      }
+      const statuses = new Set(rows.map((r) => r.status));
+      const [listStatus] = statuses;
+      if (statuses.size !== 1 || !REORDERABLE.includes(listStatus)) {
+        throw new ConflictException(
+          'These questions are no longer in the same list. Refresh and try again.',
+        );
+      }
+
+      const positions = rows.map((r) => r.position).sort((a, b) => a - b);
+      for (const [index, id] of ids.entries()) {
+        const { count } = await tx.question.updateMany({
+          where: { id, status: listStatus },
+          data: { position: positions[index] },
+        });
+        if (count === 0) {
+          throw new ConflictException(
+            'A question changed state. Refresh and try again.',
+          );
+        }
+      }
+      return listStatus;
+    });
+
+    this.realtime.emit(Room.MODERATOR, SocketEvent.QUESTION_REORDERED, {
+      status,
+    });
+    if (status === QuestionStatus.MODERATOR_APPROVED) {
+      // The question the host should see next may have changed.
+      this.realtime.emit(Room.HOST, SocketEvent.QUESTION_REORDERED, {});
+    }
+    return { status, ids };
+  }
+
   // ----------------------------------------------------------------------- host
 
-  /** The host only ever sees the oldest question waiting for them. */
+  /**
+   * The host only ever sees the first question waiting for them: the oldest
+   * one, unless the moderator changed the order.
+   */
   async hostCurrent() {
     const question = await this.prisma.question.findFirst({
       where: { status: QuestionStatus.MODERATOR_APPROVED },
-      orderBy: { moderatorApprovedAt: 'asc' },
+      orderBy: listOrder,
       include: withCategory,
     });
     return { question: question ? toPublicView(question) : null };
@@ -360,7 +419,11 @@ export class QuestionsService {
       this.prisma,
       id,
       QuestionStatus.MODERATOR_APPROVED,
-      { status: QuestionStatus.HOST_APPROVED, hostApprovedAt: new Date() },
+      {
+        status: QuestionStatus.HOST_APPROVED,
+        hostApprovedAt: new Date(),
+        position: Date.now(),
+      },
     );
     this.realtime.emit(
       Room.MODERATOR,

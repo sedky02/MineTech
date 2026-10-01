@@ -36,6 +36,8 @@ export const moderatorApi = {
   dashboard: () => apiFetch<ModeratorDashboard>("/moderator/questions"),
   act: (id: string, action: ModeratorAction) =>
     apiFetch<ModeratorQuestion>(`/moderator/questions/${id}/${action}`, { method: "PATCH" }),
+  reorder: (ids: string[]) =>
+    apiFetch<{ ids: string[] }>("/moderator/questions/reorder", { method: "PATCH", body: { ids } }),
   eventStatus: () => apiFetch<EventStatus>("/moderator/event/status"),
   pause: () => apiFetch<EventStatus>("/moderator/event/pause", { method: "PATCH" }),
   resume: () => apiFetch<EventStatus>("/moderator/event/resume", { method: "PATCH" }),

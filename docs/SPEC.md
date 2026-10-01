@@ -141,8 +141,8 @@ The moderator is the actual operator of the system.
 
 ### Dashboard
 
-- Pending questions
-- Host-approved questions
+- Pending questions, questions waiting for the host, and host-approved questions, each in its own list
+- Category filter (chips with counts) above the three lists
 - Currently displayed question
 - Previous question: the most recently answered question, so the moderator can see what was just on screen
 
@@ -154,6 +154,7 @@ The moderator is the actual operator of the system.
 - Remove (displayed question → idle screen)
 - Mark as answered
 - Roll back (re-display the previous question)
+- Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
 - Pause / Resume submissions
 
 The moderator decides when a question appears on the presentation.
@@ -179,7 +180,7 @@ Current question
 [ Reject ] [ Approve ]
 ```
 
-The host sees one `MODERATOR_APPROVED` question at a time (oldest first).
+The host sees one `MODERATOR_APPROVED` question at a time: the first in the moderator's "Waiting for host" order (oldest first unless the moderator reordered it).
 
 The host does **not** see:
 
@@ -386,6 +387,7 @@ QUESTION_HOST_REJECTED
 QUESTION_DISPLAYED
 QUESTION_REMOVED
 QUESTION_ANSWERED
+QUESTION_REORDERED
 
 SUBMISSIONS_PAUSED
 SUBMISSIONS_RESUMED
@@ -440,6 +442,7 @@ PATCH  /moderator/questions/:id/display
 PATCH  /moderator/questions/:id/remove
 PATCH  /moderator/questions/:id/answer
 PATCH  /moderator/questions/:id/rollback
+PATCH  /moderator/questions/reorder        { "ids": ["…", "…"] }
 
 PATCH  /moderator/event/pause
 PATCH  /moderator/event/resume
@@ -447,6 +450,8 @@ PATCH  /moderator/event/end
 
 GET    /moderator/event/status
 ```
+
+`PATCH /moderator/questions/reorder` takes question ids from one list (`PENDING`, `MODERATOR_APPROVED` or `HOST_APPROVED`) in their new order. The questions swap the positions they already hold, so questions not in the request (hidden by a category filter, or arriving meanwhile) keep their place. A question entering a list gets the current time as its position, so it lands at the end. Mixed lists return `409`, unknown ids `404`. Emits `QUESTION_REORDERED` to the moderator room (and the host room for the host queue).
 
 `GET /moderator/questions` returns the pending, host-approved, displayed and previous (last answered) questions, so one call rebuilds the whole dashboard after a reconnect. "Clear current display" calls `remove` on the displayed question; it doesn't need its own endpoint.
 
@@ -511,6 +516,7 @@ GET /health
 | `participant_session_id` | anonymous session ID |
 | `source` | `PRE_EVENT` \| `LIVE`: set at creation by comparing `created_at` with `EVENT_STARTS_AT`. Informational only; it doesn't change the workflow |
 | `status` | see [States](#states) |
+| `position` | order within the current list (lower = first) |
 | `created_at` | |
 | `moderator_approved_at` | nullable |
 | `moderator_rejected_at` | nullable |
