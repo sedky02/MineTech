@@ -43,7 +43,7 @@
     "dotenv": "^18.0.5",
     "helmet": "^8.3.0",
     "pg": "^8.23.1",
-    "prisma": "^6.19.3",
+    "prisma": "^7.10.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "4.8.3"
@@ -71,5 +71,9 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2",
+    "mysql2": "^3.24.5"
   }
 }
