@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
 import { Logo } from "@/components/ui/Logo";
 import { useSocket } from "@/hooks/useSocket";
@@ -10,8 +10,18 @@ import { CLUB_NAME, EVENT_NAME } from "@/lib/config";
 import { SocketEvent } from "@/lib/socket/events";
 import styles from "./presentation.module.css";
 
-const PARTICIPANT_URL = process.env.NEXT_PUBLIC_PARTICIPANT_URL ?? "";
 const CURSOR_HIDE_MS = 2500;
+
+const noSubscription = () => () => undefined;
+
+/**
+ * The address students should open: the participant page is the root of the
+ * same site, so this is the host the projector is showing. Empty during the
+ * static prerender, filled in once the page runs in the browser.
+ */
+function useSiteAddress() {
+  return useSyncExternalStore(noSubscription, () => window.location.host, () => "");
+}
 
 /** Bigger text for shorter questions so everything stays readable from the back row. */
 function sizeFor(length: number) {
@@ -28,6 +38,7 @@ function sizeFor(length: number) {
 export function PresentationScreen() {
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [cursorHidden, setCursorHidden] = useState(false);
+  const siteAddress = useSiteAddress();
   // Bumped on every socket event so an older REST response can't overwrite newer state.
   const version = useRef(0);
 
@@ -105,9 +116,9 @@ export function PresentationScreen() {
           <Logo size={220} />
           <h1 className={styles.title}>{EVENT_NAME}</h1>
           {CLUB_NAME && <p className={styles.club}>{CLUB_NAME}</p>}
-          {PARTICIPANT_URL && (
+          {siteAddress && (
             <p className={styles.cta}>
-              Ask your questions at <strong>{PARTICIPANT_URL}</strong>
+              Ask your questions at <strong>{siteAddress}</strong>
             </p>
           )}
         </section>

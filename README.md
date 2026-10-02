@@ -121,7 +121,6 @@ NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com
 NEXT_PUBLIC_WS_URL=wss://your-render-service.onrender.com
 NEXT_PUBLIC_EVENT_NAME=MineTech
 NEXT_PUBLIC_CLUB_NAME=Your Club
-NEXT_PUBLIC_PARTICIPANT_URL=your-vercel-app.vercel.app
 ```
 
 Never put secrets in `NEXT_PUBLIC_*` variables. They are visible in the browser.
@@ -130,7 +129,7 @@ Never put secrets in `NEXT_PUBLIC_*` variables. They are visible in the browser.
 
 ## Branding
 
-Replace `frontend/public/logo.svg` and `frontend/app/icon.svg` with the club logo (square works best). The event name, club name, and participant URL come from the `NEXT_PUBLIC_*` variables above.
+Replace `frontend/public/logo.svg` and `frontend/app/icon.svg` with the club logo (square works best). The event name and club name come from the `NEXT_PUBLIC_*` variables above. The projector's idle screen shows the site's own address ("Ask your questions at …"), so it is always correct for whatever domain you deploy to.
 
 ## Documentation
 

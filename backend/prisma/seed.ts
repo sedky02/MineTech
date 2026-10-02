@@ -9,14 +9,14 @@ import { PrismaClient } from '../src/generated/prisma/client.js';
 import type { Role } from '../src/generated/prisma/enums.js';
 
 const CATEGORIES = [
+  { name: 'General', slug: 'general' },
+  { name: 'Career & Studies', slug: 'career-studies' },
   { name: 'Web Development', slug: 'web-development' },
   { name: 'AI & Data', slug: 'ai-data' },
   { name: 'Cybersecurity', slug: 'cybersecurity' },
   { name: 'DevOps & Cloud', slug: 'devops-cloud' },
   { name: 'Mobile Development', slug: 'mobile-development' },
-  { name: 'Software Engineering', slug: 'software-engineering' },
-  { name: 'Career & Studies', slug: 'career-studies' },
-  { name: 'General', slug: 'general' },
+  { name: 'Game Development', slug: 'game-development' },
 ];
 
 const prisma = new PrismaClient({
