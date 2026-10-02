@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
 import { Logo } from "@/components/ui/Logo";
@@ -96,6 +97,13 @@ export function PresentationScreen() {
   return (
     <main className={styles.screen} data-cursor-hidden={cursorHidden}>
       <div className={styles.stars} aria-hidden />
+
+      {/* Back to the question form. Fades out with the cursor, so it disappears on the projector. */}
+      <Link href="/" className={`btn btn-quiet ${styles.back}`} aria-label="Back to ask a question" title="Ask a question">
+        <svg viewBox="0 0 8 7" width="24" height="21" shapeRendering="crispEdges" fill="currentColor" aria-hidden>
+          <path d="M3 0h1v7H3zM2 1h1v5H2zM1 2h1v3H1zM0 3h1v1H0zM4 2h4v3H4z" />
+        </svg>
+      </Link>
 
       {question ? (
         <section key={question.id} className={styles.question} aria-live="polite">

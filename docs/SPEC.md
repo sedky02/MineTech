@@ -208,7 +208,7 @@ Dedicated full-screen route: `/presentation`
 - Event branding and club logo
 - Minecraft-inspired visual design
 
-**No controls** are visible. When the moderator clicks **Display**, the screen updates in real time.
+**No controls** are visible, apart from a small back-arrow button (top left) that returns to the question form. It fades out with the mouse cursor after 2.5 s without movement, so it disappears on the projector; on phones it stays visible. When the moderator clicks **Display**, the screen updates in real time.
 
 ### Idle screen
 
