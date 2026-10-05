@@ -82,7 +82,8 @@ REJECTED        REJECTED
 - Lists are ordered by `position` (then `created_at`). Entering a list sets `position` to the current time (end of list); `PATCH /moderator/questions/reorder` permutes the positions of the given ids only. The host sees the first `MODERATOR_APPROVED` by position. The frontend mirrors this rule for optimistic updates (`applySubsetOrder` in `hooks/useQuestions.ts`).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.
 - At most one question is `DISPLAYED` at a time. Displaying a new question auto-marks the current one `ANSWERED`, in the same transaction.
-- Remove, answer, "clear display" and "end event" all leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question. End event also closes submissions for good.
+- Remove, answer and "clear display" leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question.
+- There is no "End event" action (removed after an accidental use in production); Pause is the way to stop submissions. Don't reintroduce an irreversible event-level action.
 - The moderator dashboard shows the **previous question** (most recently answered).
 - `source` (`PRE_EVENT`/`LIVE`) is informational only, derived from `EVENT_STARTS_AT`.
 - Set the matching timestamp column (`moderator_approved_at`, `host_rejected_at`, …) on every transition.

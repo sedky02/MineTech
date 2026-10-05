@@ -93,10 +93,6 @@
   background: var(--gold);
 }
 
-.submissionState[data-state="ended"]::before {
-  background: var(--redstone);
-}
-
 .stage {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -351,39 +347,6 @@
 
 .toastClose:hover {
   color: var(--text);
-}
-
-/* ---------------------------------------------------------------- dialog */
-
-.dialog {
-  width: min(460px, calc(100vw - 32px));
-  color: var(--text);
-  padding: 24px;
-}
-
-.dialog::backdrop {
-  background: rgba(5, 5, 8, 0.7);
-}
-
-.dialogTitle {
-  font-size: 15px;
-  margin-bottom: 14px;
-}
-
-.dialogBody {
-  display: grid;
-  gap: 8px;
-}
-
-.dialogBody p {
-  margin: 0;
-}
-
-.dialogActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 22px;
 }
 
 @media (max-width: 1100px) {

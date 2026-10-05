@@ -7,7 +7,6 @@ interface Props {
   busy: boolean;
   onToggleSubmissions: () => void;
   onClearScreen: () => void;
-  onEndEvent: () => void;
 }
 
 /**
@@ -15,10 +14,9 @@ interface Props {
  * submission control in the middle, and the emergency actions set apart on
  * the right (SPEC §5).
  */
-export function EventControls({ status, dashboard, busy, onToggleSubmissions, onClearScreen, onEndEvent }: Props) {
-  const ended = status?.ended ?? false;
-  const state = ended ? "ended" : status?.paused ? "paused" : "open";
-  const stateLabel = { open: "Questions open", paused: "Questions paused", ended: "Event ended" }[state];
+export function EventControls({ status, dashboard, busy, onToggleSubmissions, onClearScreen }: Props) {
+  const state = status?.paused ? "paused" : "open";
+  const stateLabel = state === "paused" ? "Questions paused" : "Questions open";
 
   const summary = [
     { label: "To review", value: dashboard.pending.length, attention: dashboard.pending.length > 0 },
@@ -43,16 +41,14 @@ export function EventControls({ status, dashboard, busy, onToggleSubmissions, on
         <span className={styles.submissionState} data-state={state}>
           {stateLabel}
         </span>
-        {!ended && (
-          <button
-            type="button"
-            className={`btn btn-sm ${status?.paused ? "btn-primary" : "btn-gold"}`}
-            onClick={onToggleSubmissions}
-            disabled={busy || !status}
-          >
-            {status?.paused ? "Resume questions" : "Pause questions"}
-          </button>
-        )}
+        <button
+          type="button"
+          className={`btn btn-sm ${status?.paused ? "btn-primary" : "btn-gold"}`}
+          onClick={onToggleSubmissions}
+          disabled={busy || !status}
+        >
+          {status?.paused ? "Resume questions" : "Pause questions"}
+        </button>
       </div>
 
       <div className={styles.danger} role="group" aria-label="Emergency actions">
@@ -64,9 +60,6 @@ export function EventControls({ status, dashboard, busy, onToggleSubmissions, on
           title="Shows the event logo on the projector"
         >
           Clear screen
-        </button>
-        <button type="button" className="btn btn-sm btn-quiet-danger" onClick={onEndEvent} disabled={busy || ended}>
-          End event…
         </button>
       </div>
     </section>

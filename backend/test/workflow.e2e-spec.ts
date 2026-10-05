@@ -431,32 +431,29 @@ describe('Question workflow (SPEC §4, §20)', () => {
     ]);
   });
 
-  it('pause, resume and end control submissions', async () => {
+  it('pause and resume control submissions', async () => {
     const r = await rooms();
 
     await mod('patch', '/moderator/event/pause').expect(200);
     await r.moderator.waitFor('SUBMISSIONS_PAUSED');
     expect((await ctx.http().get('/event/status')).body).toEqual({
       submissionsOpen: false,
-      ended: false,
+    });
+    expect((await mod('get', '/moderator/event/status')).body).toMatchObject({
+      submissionsOpen: false,
+      paused: true,
     });
     await submit(ctx).expect(403);
 
     await mod('patch', '/moderator/event/resume').expect(200);
     await r.moderator.waitFor('SUBMISSIONS_RESUMED');
+    expect((await ctx.http().get('/event/status')).body).toEqual({
+      submissionsOpen: true,
+    });
     await submit(ctx).expect(201);
+  });
 
-    const id = await toHostApproved('Displayed when the event ends?');
-    await mod('patch', `/moderator/questions/${id}/display`).expect(200);
-
-    const end = await mod('patch', '/moderator/event/end').expect(200);
-    expect(end.body).toMatchObject({ submissionsOpen: false, ended: true });
-    await r.presentation.waitFor('EVENT_ENDED');
-    await r.host.waitFor('EVENT_ENDED');
-    expect(
-      (await ctx.http().get('/presentation/current')).body.question,
-    ).toBeNull();
-    await submit(ctx).expect(403);
-    await mod('patch', '/moderator/event/resume').expect(409);
+  it('no longer has an end event endpoint', async () => {
+    await mod('patch', '/moderator/event/end').expect(404);
   });
 });

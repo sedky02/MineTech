@@ -169,9 +169,8 @@ The moderator decides when a question appears on the presentation.
 | Pause submissions | New submissions are refused |
 | Resume submissions | Submissions accepted again |
 | Clear current display | Same as **Remove** on the displayed question: presentation shows the idle screen |
-| End event | Clears the display (idle screen) and closes submissions for good. Asks for confirmation first |
 
-Emergency actions are grouped apart from the routine pause/resume control and styled with less weight, so they are not hit by accident.
+"Clear screen" is set apart from the routine pause/resume control and styled with less weight, so it is not hit by accident. There is no "End event" action: it was removed after it was triggered by accident in production. To stop questions at the end, use Pause.
 
 ---
 
@@ -216,7 +215,7 @@ When no question is `DISPLAYED`, the presentation shows the **event logo and eve
 
 - At startup, before anything is displayed
 - After a question is removed or answered
-- After the display is cleared or the event is ended
+- After the display is cleared
 
 ---
 
@@ -371,7 +370,6 @@ Host approves:        PATCH approve   → DB (HOST_APPROVED)      → QUESTION_H
 Moderator displays:   PATCH display   → DB (DISPLAYED)          → QUESTION_DISPLAYED      → presentation, moderator
 Moderator removes:    PATCH remove    → DB (HOST_APPROVED)      → QUESTION_REMOVED        → presentation (idle), moderator
 Moderator answers:    PATCH answer    → DB (ANSWERED)           → QUESTION_ANSWERED       → presentation (idle), moderator
-Moderator ends event: PATCH end       → DB (event ended)        → EVENT_ENDED             → all rooms
 ```
 
 If **Display** auto-answers the previous question, emit `QUESTION_ANSWERED` for the old one before `QUESTION_DISPLAYED` for the new one.
@@ -396,8 +394,6 @@ QUESTION_REORDERED
 
 SUBMISSIONS_PAUSED
 SUBMISSIONS_RESUMED
-
-EVENT_ENDED
 ```
 
 ### Reconnection strategy
@@ -451,7 +447,6 @@ PATCH  /moderator/questions/reorder        { "ids": ["…", "…"] }
 
 PATCH  /moderator/event/pause
 PATCH  /moderator/event/resume
-PATCH  /moderator/event/end
 
 GET    /moderator/event/status
 ```
@@ -539,7 +534,6 @@ A single-row table holding global event state (proposed):
 | --- | --- |
 | `id` | always 1 |
 | `submissions_open` | boolean, toggled by pause/resume |
-| `ended_at` | nullable, set by End event |
 | `updated_at` | |
 
 ---

@@ -87,7 +87,6 @@ export class QuestionsService {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${participantSessionId}))`;
 
       const state = await tx.eventState.findUnique({ where: { id: 1 } });
-      if (state?.endedAt) throw new ForbiddenException('The event has ended');
       if (state && !state.submissionsOpen) {
         throw new ForbiddenException('Submissions are paused');
       }
@@ -302,21 +301,6 @@ export class QuestionsService {
     );
     this.emitAnswered(question);
     return toModeratorView(question);
-  }
-
-  /** Removes whatever is on screen, if anything (used by End event). */
-  async clearDisplay() {
-    const displayed = await this.prisma.question.findFirst({
-      where: { status: QuestionStatus.DISPLAYED },
-      select: { id: true },
-    });
-    if (!displayed) return;
-    try {
-      await this.remove(displayed.id);
-    } catch (error) {
-      // Someone else changed it in the meantime: the screen is already moving on.
-      if (!(error instanceof ConflictException)) throw error;
-    }
   }
 
   async moderatorDashboard() {

@@ -12,7 +12,6 @@ export const SocketEvent = {
   QUESTION_REORDERED: 'QUESTION_REORDERED',
   SUBMISSIONS_PAUSED: 'SUBMISSIONS_PAUSED',
   SUBMISSIONS_RESUMED: 'SUBMISSIONS_RESUMED',
-  EVENT_ENDED: 'EVENT_ENDED',
 } as const;
 export type SocketEvent = (typeof SocketEvent)[keyof typeof SocketEvent];
 

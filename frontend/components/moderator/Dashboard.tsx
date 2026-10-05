@@ -13,7 +13,6 @@ import { type ModeratorAction, moderatorApi, publicApi } from "@/lib/api/endpoin
 import type { Category, ModeratorQuestion } from "@/lib/api/types";
 import { EVENT_NAME } from "@/lib/config";
 import { ALL_CATEGORIES, CategoryFilter } from "./CategoryFilter";
-import { ConfirmDialog } from "./ConfirmDialog";
 import { EventControls } from "./EventControls";
 import { Author, QuestionCard, formatTime } from "./QuestionCard";
 import { SortableList } from "./SortableList";
@@ -65,7 +64,6 @@ export function Dashboard() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
-  const [confirmEnd, setConfirmEnd] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -176,7 +174,6 @@ export function Dashboard() {
             : void run("event", moderatorApi.pause, "Questions paused")
         }
         onClearScreen={() => displayed && act(displayed.id, "remove")}
-        onEndEvent={() => setConfirmEnd(true)}
       />
 
       {connection === "reconnecting" && (
@@ -374,20 +371,6 @@ export function Dashboard() {
       </section>
 
       <ToastRegion toasts={toasts} onDismiss={dismiss} />
-
-      <ConfirmDialog
-        open={confirmEnd}
-        title="End the event?"
-        confirmLabel="End event"
-        onCancel={() => setConfirmEnd(false)}
-        onConfirm={() => {
-          setConfirmEnd(false);
-          void run("event", moderatorApi.end, "Event ended");
-        }}
-      >
-        <p>Students can no longer send questions, and the projector shows the event logo.</p>
-        <p className="muted">Questions already in your lists stay available. This can&apos;t be undone.</p>
-      </ConfirmDialog>
     </div>
   );
 }

@@ -87,7 +87,6 @@ model Question {
 model EventState {
   id               Int       @id @default(1)
   submissionsOpen  Boolean   @default(true) @map("submissions_open")
-  endedAt          DateTime? @map("ended_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   @@map("event_state")

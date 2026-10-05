@@ -41,7 +41,6 @@ export const moderatorApi = {
   eventStatus: () => apiFetch<EventStatus>("/moderator/event/status"),
   pause: () => apiFetch<EventStatus>("/moderator/event/pause", { method: "PATCH" }),
   resume: () => apiFetch<EventStatus>("/moderator/event/resume", { method: "PATCH" }),
-  end: () => apiFetch<EventStatus>("/moderator/event/end", { method: "PATCH" }),
 };
 
 export const hostApi = {

@@ -157,7 +157,7 @@ describe('Security and validation (SPEC §8, §9)', () => {
         .expect(403);
       await ctx
         .http()
-        .patch('/moderator/event/end')
+        .patch('/moderator/event/pause')
         .set('Cookie', hostCookie)
         .expect(403);
       await ctx

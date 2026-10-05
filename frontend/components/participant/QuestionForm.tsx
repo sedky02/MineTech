@@ -18,7 +18,7 @@ async function loadInitialData() {
 export function QuestionForm() {
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [categories, setCategories] = useState<Category[]>([]);
-  const [eventStatus, setEventStatus] = useState<PublicEventStatus>({ submissionsOpen: true, ended: false });
+  const [eventStatus, setEventStatus] = useState<PublicEventStatus>({ submissionsOpen: true });
 
   const [category, setCategory] = useState("");
   const [content, setContent] = useState("");
@@ -67,7 +67,7 @@ export function QuestionForm() {
       setContent("");
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) {
-        // Paused or ended in the meantime: refresh the banner.
+        // Paused in the meantime: refresh the banner.
         publicApi.eventStatus().then(setEventStatus).catch(() => undefined);
       }
       const serverFailed = !(e instanceof ApiError) || e.status === 0 || e.status >= 500;
@@ -88,15 +88,6 @@ export function QuestionForm() {
         <button className="btn btn-sm" onClick={retryLoad}>
           Try again
         </button>
-      </div>
-    );
-  }
-
-  if (eventStatus.ended) {
-    return (
-      <div className="panel">
-        <h2 className={styles.confirmTitle}>The event has ended</h2>
-        <p className="muted">Thanks for joining us and for all your questions!</p>
       </div>
     );
   }

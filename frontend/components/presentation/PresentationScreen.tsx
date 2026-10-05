@@ -63,8 +63,6 @@ export function PresentationScreen() {
       } else if (event === SocketEvent.QUESTION_REMOVED || event === SocketEvent.QUESTION_ANSWERED) {
         const { id } = payload as { id: string };
         setQuestion((current) => (current?.id === id ? null : current));
-      } else if (event === SocketEvent.EVENT_ENDED) {
-        setQuestion(null);
       }
     },
   });

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
@@ -8,12 +8,10 @@ const EVENT_STATE_ID = 1;
 
 export interface PublicEventStatus {
   submissionsOpen: boolean;
-  ended: boolean;
 }
 
 export interface EventStatus extends PublicEventStatus {
   paused: boolean;
-  endedAt: Date | null;
   eventStartsAt: string | null;
 }
 
@@ -36,41 +34,28 @@ export class EventService {
 
   async getStatus(): Promise<EventStatus> {
     const state = await this.getState();
-    const ended = state.endedAt !== null;
     return {
-      submissionsOpen: state.submissionsOpen && !ended,
-      paused: !state.submissionsOpen && !ended,
-      ended,
-      endedAt: state.endedAt,
+      submissionsOpen: state.submissionsOpen,
+      paused: !state.submissionsOpen,
       eventStartsAt: this.config.get<string>('EVENT_STARTS_AT') ?? null,
     };
   }
 
   async getPublicStatus(): Promise<PublicEventStatus> {
-    const { submissionsOpen, ended } = await this.getStatus();
-    return { submissionsOpen, ended };
+    const { submissionsOpen } = await this.getStatus();
+    return { submissionsOpen };
   }
 
   async setSubmissionsOpen(open: boolean): Promise<EventStatus> {
-    const state = await this.getState();
-    if (state.endedAt) throw new ConflictException('The event has ended');
-
-    await this.prisma.eventState.update({
+    await this.prisma.eventState.upsert({
       where: { id: EVENT_STATE_ID },
-      data: { submissionsOpen: open },
+      create: { id: EVENT_STATE_ID, submissionsOpen: open },
+      update: { submissionsOpen: open },
     });
     this.realtime.emit(
       Room.MODERATOR,
       open ? SocketEvent.SUBMISSIONS_RESUMED : SocketEvent.SUBMISSIONS_PAUSED,
     );
     return this.getStatus();
-  }
-
-  /** Closes submissions for good. Idempotent: keeps the first end time. */
-  async markEnded(): Promise<void> {
-    await this.prisma.eventState.updateMany({
-      where: { id: EVENT_STATE_ID, endedAt: null },
-      data: { submissionsOpen: false, endedAt: new Date() },
-    });
   }
 }

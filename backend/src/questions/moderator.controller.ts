@@ -10,8 +10,6 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Auth } from '../common/decorators/auth.decorator.js';
 import { Role } from '../generated/prisma/enums.js';
 import { EventService } from '../event/event.service.js';
-import { RealtimeGateway } from '../realtime/realtime.gateway.js';
-import { Room, SocketEvent } from '../realtime/realtime.events.js';
 import { ReorderQuestionsDto } from './dto/reorder-questions.dto.js';
 import { QuestionsService } from './questions.service.js';
 
@@ -22,7 +20,6 @@ export class ModeratorController {
   constructor(
     private readonly questions: QuestionsService,
     private readonly event: EventService,
-    private readonly realtime: RealtimeGateway,
   ) {}
 
   /** Everything the dashboard needs in one call (also used to resync after reconnect). */
@@ -80,17 +77,5 @@ export class ModeratorController {
   @Patch('event/resume')
   resume() {
     return this.event.setSubmissionsOpen(true);
-  }
-
-  /** Closes submissions for good and returns the presentation to the idle screen. */
-  @Patch('event/end')
-  async end() {
-    await this.event.markEnded();
-    await this.questions.clearDisplay();
-    this.realtime.emit(
-      [Room.MODERATOR, Room.HOST, Room.PRESENTATION],
-      SocketEvent.EVENT_ENDED,
-    );
-    return this.event.getStatus();
   }
 }

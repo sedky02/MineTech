@@ -44,12 +44,10 @@ export interface ModeratorDashboard {
 
 export interface PublicEventStatus {
   submissionsOpen: boolean;
-  ended: boolean;
 }
 
 export interface EventStatus extends PublicEventStatus {
   paused: boolean;
-  endedAt: string | null;
   eventStartsAt: string | null;
 }
 

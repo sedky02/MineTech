@@ -47,7 +47,7 @@ export async function resetDatabase(prisma: PrismaService) {
   await prisma.eventState.upsert({
     where: { id: 1 },
     create: { id: 1 },
-    update: { submissionsOpen: true, endedAt: null },
+    update: { submissionsOpen: true },
   });
   await prisma.category.createMany({
     data: [
