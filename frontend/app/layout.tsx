@@ -16,8 +16,8 @@ const pixelify = Pixelify_Sans({
 });
 
 export const metadata: Metadata = {
-  title: `${EVENT_NAME} — Ask the speakers`,
-  description: "Send your questions to the speakers of the club tech event.",
+  title: `${EVENT_NAME}`,
+  description: `A live Q&A for ${EVENT_NAME}. Ask questions and see them on screen!`,
 };
 
 export const viewport: Viewport = {
