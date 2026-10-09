@@ -8,10 +8,6 @@ export default function ParticipantPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Wordmark size={64} titleAs="h1" />
-        <p className={styles.intro}>
-          Ask the speakers anything about tech, studies or careers. Your question is anonymous unless you add your
-          name.
-        </p>
       </header>
       <QuestionForm />
       <footer className={styles.footer}>

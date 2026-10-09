@@ -1,4 +1,6 @@
 .page {
+  /* Horizontal padding inside the form box; the intro uses it too, so the two line up. */
+  --form-pad-x: 20px;
   max-width: 600px;
   margin: 0 auto;
   padding: 24px 16px 48px;
@@ -41,6 +43,8 @@
 
 .intro {
   margin: 0;
+  /* Starts where the form's content starts ("1. Pick a topic"): box border + padding. */
+  padding-inline: calc(var(--pixel) + var(--form-pad-x));
   color: var(--text-dim);
   text-wrap: pretty;
 }
@@ -48,6 +52,7 @@
 .form {
   display: grid;
   gap: 22px;
+  padding-inline: var(--form-pad-x);
   animation: arrive 180ms ease-out both;
 }
 
@@ -64,6 +69,11 @@
   margin: 0;
   display: grid;
   gap: 10px;
+}
+
+/* Browsers pad a legend by 2px; drop it so the label lines up with the tiles and the intro. */
+.fieldset > legend {
+  padding: 0;
 }
 
 .categories {
@@ -93,8 +103,12 @@
 
 /* Phones: two topic columns leave ~95px for a label, less than "Cybersecurity" needs. */
 @media (max-width: 420px) {
+  .page {
+    --form-pad-x: 14px;
+  }
+
   .form {
-    padding: 16px 14px;
+    padding-block: 16px;
   }
 
   .categories {

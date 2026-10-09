@@ -1,5 +1,6 @@
 "use client";
 
+import { Google_Sans } from "next/font/google";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
@@ -10,6 +11,17 @@ import type { PublicQuestion } from "@/lib/api/types";
 import { EVENT_NAME } from "@/lib/config";
 import { SocketEvent } from "@/lib/socket/events";
 import styles from "./presentation.module.css";
+
+/**
+ * Google Sans (the GDG lockup's typeface) for the projected question: a clean
+ * reading face for long text at the back of the room, with accented letters.
+ * Loaded here so only the presentation route downloads it.
+ */
+const questionFont = Google_Sans({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-question",
+  display: "swap",
+});
 
 const CURSOR_HIDE_MS = 2500;
 
@@ -93,7 +105,7 @@ export function PresentationScreen() {
   }, []);
 
   return (
-    <main className={styles.screen} data-cursor-hidden={cursorHidden}>
+    <main className={`${styles.screen} ${questionFont.variable}`} data-cursor-hidden={cursorHidden}>
 
       {/* Back to the question form. Fades out with the cursor, so it disappears on the projector. */}
       <Link href="/" className={`btn btn-quiet ${styles.back}`} aria-label="Back to ask a question" title="Ask a question">
