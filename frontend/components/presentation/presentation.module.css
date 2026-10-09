@@ -44,7 +44,10 @@
 .titleLogo {
   width: min(80vw, 1100px);
   height: auto;
-  animation: float 3s steps(6) infinite;
+  /* A smooth glide: steps() on a logo this large reads as stutter (4 hops a second). */
+  animation: float 3s ease-in-out infinite;
+  /* Keep it on its own compositor layer, so each frame moves a texture instead of repainting the SVG. */
+  will-change: transform;
   filter: drop-shadow(8px 8px 0 rgba(0, 0, 0, 0.5));
 }
 

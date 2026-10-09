@@ -130,11 +130,6 @@ export function PresentationScreen() {
           <h1 className={styles.title}>
             <WordmarkLogo height={220} className={styles.titleLogo} />
           </h1>
-          {siteAddress && (
-            <p className={styles.cta}>
-              Ask your questions at <strong>{siteAddress}</strong>
-            </p>
-          )}
         </section>
       )}
 
