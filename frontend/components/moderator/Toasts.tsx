@@ -10,8 +10,10 @@ export interface Toast {
 }
 
 const SUCCESS_MS = 2500;
+/** Errors stay long enough to read, but never block the controls under them for good. */
+const ERROR_MS = 8000;
 
-/** Short confirmations disappear on their own; errors stay until dismissed. */
+/** Confirmations disappear quickly, errors after a few seconds; either can be dismissed. */
 export function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(0);
@@ -28,7 +30,7 @@ export function useToasts() {
       const id = ++nextId.current;
       // Keep at most 3 on screen, newest last.
       setToasts((current) => [...current.slice(-2), { id, tone, message }]);
-      if (tone === "success") timers.current.set(id, setTimeout(() => dismiss(id), SUCCESS_MS));
+      timers.current.set(id, setTimeout(() => dismiss(id), tone === "success" ? SUCCESS_MS : ERROR_MS));
     },
     [dismiss],
   );

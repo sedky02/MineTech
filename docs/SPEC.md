@@ -64,6 +64,8 @@ After submission, show a simple confirmation only. Pre-event and live questions 
 | Career & Studies | `career-studies` |
 | General | `general` |
 
+These are the seeded defaults. The moderator manages topics from the dashboard (see [Moderator → Topics](#topics)).
+
 ---
 
 ## 4. Question Workflow
@@ -157,10 +159,23 @@ The moderator is the actual operator of the system.
 - Roll back (re-display the previous question)
 - Keyboard shortcuts on a focused question card: `A` send to host, `R` reject, `S` show on screen, `Alt+↑/↓` change priority. Focus moves to the next card after an action, so a burst of questions can be cleared without the mouse.
 - Every action confirms itself with a short toast; errors stay until dismissed. Only the card being acted on is disabled while a request runs.
+- Manage topics (see [Topics](#topics) below)
 - Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
 - Pause / Resume submissions
 
 The moderator decides when a question appears on the presentation.
+
+### Topics
+
+A collapsible **Topics** section at the bottom of the dashboard (set-up work, so it stays out of the live queue):
+
+- **Add** a topic: 1–40 characters, unique (case-insensitive). Its slug is generated from the name ("AI & Data" → `ai-data`; `-2`, `-3`… if taken) and appended to the end of the list.
+- **Rename**: changes the display name only. The slug never changes, because questions, colours and filters refer to it.
+- **Hide / Show**: hidden topics disappear from the student form (`is_active = false`); their questions keep the topic and can still be filtered.
+- **Delete**: only for topics with **no** questions. A used topic must be hidden instead (`409` otherwise).
+- At least one topic always stays visible: hiding or deleting the last visible one returns `409` (the button is disabled too).
+- New topics without a colour of their own get the fallback block colour (amethyst).
+- If a topic is hidden or deleted while a student has the form open, their submit gets "That topic is no longer available. Pick another one." under the topics, the list refreshes, and their question text is kept.
 
 ### Emergency controls
 
@@ -391,6 +406,7 @@ QUESTION_DISPLAYED
 QUESTION_REMOVED
 QUESTION_ANSWERED
 QUESTION_REORDERED
+CATEGORIES_UPDATED
 
 SUBMISSIONS_PAUSED
 SUBMISSIONS_RESUMED
@@ -444,6 +460,11 @@ PATCH  /moderator/questions/:id/remove
 PATCH  /moderator/questions/:id/answer
 PATCH  /moderator/questions/:id/rollback
 PATCH  /moderator/questions/reorder        { "ids": ["…", "…"] }
+
+GET    /moderator/categories               all topics, hidden ones included, with questionCount
+POST   /moderator/categories               { "name": "…" }
+PATCH  /moderator/categories/:id           { "name"?: "…", "isActive"?: true|false }
+DELETE /moderator/categories/:id           204, or 409 if the topic has questions
 
 PATCH  /moderator/event/pause
 PATCH  /moderator/event/resume

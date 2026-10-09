@@ -3,6 +3,7 @@ import type {
   AuthUser,
   Category,
   EventStatus,
+  ModeratorCategory,
   ModeratorDashboard,
   ModeratorQuestion,
   PublicEventStatus,
@@ -39,6 +40,12 @@ export const moderatorApi = {
   reorder: (ids: string[]) =>
     apiFetch<{ ids: string[] }>("/moderator/questions/reorder", { method: "PATCH", body: { ids } }),
   eventStatus: () => apiFetch<EventStatus>("/moderator/event/status"),
+  categories: () => apiFetch<ModeratorCategory[]>("/moderator/categories"),
+  createCategory: (name: string) =>
+    apiFetch<ModeratorCategory>("/moderator/categories", { method: "POST", body: { name } }),
+  updateCategory: (id: string, changes: { name?: string; isActive?: boolean }) =>
+    apiFetch<ModeratorCategory>(`/moderator/categories/${id}`, { method: "PATCH", body: changes }),
+  deleteCategory: (id: string) => apiFetch<void>(`/moderator/categories/${id}`, { method: "DELETE" }),
   pause: () => apiFetch<EventStatus>("/moderator/event/pause", { method: "PATCH" }),
   resume: () => apiFetch<EventStatus>("/moderator/event/resume", { method: "PATCH" }),
 };

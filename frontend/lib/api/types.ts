@@ -42,6 +42,15 @@ export interface ModeratorDashboard {
   stats: { answered: number; rejected: number };
 }
 
+/** A topic as the moderator manages it (hidden ones included). */
+export interface ModeratorCategory extends Category {
+  id: string;
+  isActive: boolean;
+  displayOrder: number;
+  /** Questions using this topic, in any state. Used topics can be hidden but not deleted. */
+  questionCount: number;
+}
+
 export interface PublicEventStatus {
   submissionsOpen: boolean;
 }

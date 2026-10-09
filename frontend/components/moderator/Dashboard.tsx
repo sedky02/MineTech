@@ -9,10 +9,11 @@ import { LoadingScreen, MessageScreen } from "@/components/ui/StatusScreens";
 import { useAuth } from "@/hooks/useAuth";
 import { type QueueColumn, useModeratorQuestions } from "@/hooks/useQuestions";
 import { ApiError } from "@/lib/api/client";
-import { type ModeratorAction, moderatorApi, publicApi } from "@/lib/api/endpoints";
-import type { Category, ModeratorQuestion } from "@/lib/api/types";
+import { type ModeratorAction, moderatorApi } from "@/lib/api/endpoints";
+import type { ModeratorQuestion } from "@/lib/api/types";
 import { EVENT_NAME } from "@/lib/config";
 import { ALL_CATEGORIES, CategoryFilter } from "./CategoryFilter";
+import { CategoryManager } from "./CategoryManager";
 import { EventControls } from "./EventControls";
 import { Author, QuestionCard, formatTime } from "./QuestionCard";
 import { SortableList } from "./SortableList";
@@ -35,8 +36,8 @@ const SUCCESS_MESSAGES: Record<ModeratorAction, string> = {
 /** Actions after which the card leaves its list, so focus moves to its neighbour. */
 const LEAVES_LIST: ModeratorAction[] = ["approve", "reject", "display"];
 
-function describeError(error: unknown) {
-  if (error instanceof ApiError && error.status === 409) {
+function describeError(error: unknown, serverMessages: boolean) {
+  if (!serverMessages && error instanceof ApiError && error.status === 409) {
     return "That question was already handled. The lists are now up to date.";
   }
   return error instanceof Error ? error.message : "Something went wrong. Please try again.";
@@ -57,18 +58,13 @@ function focusCard(id: string) {
 
 export function Dashboard() {
   const auth = useAuth("MODERATOR");
-  const { dashboard, eventStatus, error, refresh, connection, reorderLocally } = useModeratorQuestions(
+  const { dashboard, eventStatus, categories, error, refresh, connection, reorderLocally } = useModeratorQuestions(
     auth.status === "ready",
   );
   const { toasts, push, dismiss } = useToasts();
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
-  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
   const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    publicApi.categories().then(setCategories, () => undefined);
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS);
@@ -81,13 +77,25 @@ export function Dashboard() {
     document.title = `${pendingCount > 0 ? `(${pendingCount}) ` : ""}Moderator · ${EVENT_NAME}`;
   }, [pendingCount]);
 
-  async function run(key: string, action: () => Promise<unknown>, success?: string, focusNext?: string) {
+  /**
+   * Runs one action: marks it busy, shows a toast, refreshes from the server.
+   * `serverMessages` shows the server's own conflict text (topic actions)
+   * instead of the "already handled" message used for questions.
+   * Resolves to whether the action succeeded.
+   */
+  async function run(
+    key: string,
+    action: () => Promise<unknown>,
+    { success, focusNext, serverMessages = false }: { success?: string; focusNext?: string; serverMessages?: boolean } = {},
+  ): Promise<boolean> {
     setBusy((current) => new Set(current).add(key));
+    let ok = false;
     try {
       await action();
+      ok = true;
       if (success) push("success", success);
     } catch (e) {
-      push("error", describeError(e));
+      push("error", describeError(e, serverMessages));
     } finally {
       setBusy((current) => {
         const next = new Set(current);
@@ -97,15 +105,14 @@ export function Dashboard() {
       await refresh();
       if (focusNext) focusCard(focusNext);
     }
+    return ok;
   }
 
   const act = (id: string, action: ModeratorAction) =>
-    run(
-      `question:${id}`,
-      () => moderatorApi.act(id, action),
-      SUCCESS_MESSAGES[action],
-      LEAVES_LIST.includes(action) ? neighbourOf(id) : undefined,
-    );
+    run(`question:${id}`, () => moderatorApi.act(id, action), {
+      success: SUCCESS_MESSAGES[action],
+      focusNext: LEAVES_LIST.includes(action) ? neighbourOf(id) : undefined,
+    });
   const isBusy = (id: string) => busy.has(`question:${id}`);
   const eventBusy = busy.has("event");
 
@@ -170,8 +177,8 @@ export function Dashboard() {
         busy={eventBusy}
         onToggleSubmissions={() =>
           eventStatus?.paused
-            ? void run("event", moderatorApi.resume, "Questions are open again")
-            : void run("event", moderatorApi.pause, "Questions paused")
+            ? void run("event", moderatorApi.resume, { success: "Questions are open again" })
+            : void run("event", moderatorApi.pause, { success: "Questions paused" })
         }
         onClearScreen={() => displayed && act(displayed.id, "remove")}
       />
@@ -251,7 +258,7 @@ export function Dashboard() {
 
       <div className={styles.listTools}>
         <CategoryFilter
-          categories={categories}
+          categories={categories.filter((c) => c.isActive || counts[c.slug])}
           counts={counts}
           total={queued.length}
           selected={categoryFilter}
@@ -369,6 +376,35 @@ export function Dashboard() {
           />
         </Column>
       </section>
+
+      <CategoryManager
+        categories={categories}
+        busy={(id) => busy.has(`topic:${id}`)}
+        onCreate={(name) =>
+          run("topic:new", () => moderatorApi.createCategory(name), {
+            success: `Added "${name}"`,
+            serverMessages: true,
+          })
+        }
+        onRename={(id, name) =>
+          run(`topic:${id}`, () => moderatorApi.updateCategory(id, { name }), {
+            success: `Renamed to "${name}"`,
+            serverMessages: true,
+          })
+        }
+        onToggleVisible={(category) =>
+          run(`topic:${category.id}`, () => moderatorApi.updateCategory(category.id, { isActive: !category.isActive }), {
+            success: category.isActive ? `"${category.name}" is hidden from students` : `"${category.name}" is visible again`,
+            serverMessages: true,
+          })
+        }
+        onDelete={(category) =>
+          run(`topic:${category.id}`, () => moderatorApi.deleteCategory(category.id), {
+            success: `Deleted "${category.name}"`,
+            serverMessages: true,
+          })
+        }
+      />
 
       <ToastRegion toasts={toasts} onDismiss={dismiss} />
     </div>

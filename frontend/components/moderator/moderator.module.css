@@ -1,5 +1,7 @@
 .page {
   padding: 16px;
+  /* Room to scroll the last rows above the toast area (bottom right). */
+  padding-bottom: 140px;
   display: grid;
   gap: 16px;
   max-width: 1600px;
@@ -305,6 +307,8 @@
 /* ---------------------------------------------------------------- toasts */
 
 .toasts {
+  /* Only the toasts themselves take clicks; the gaps between them don't. */
+  pointer-events: none;
   position: fixed;
   right: 16px;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
@@ -315,6 +319,7 @@
 }
 
 .toast {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -482,4 +487,147 @@
 .count[data-attention] {
   background: var(--gold);
   color: var(--outline);
+}
+
+/* ---------------------------------------------------------- topic manager */
+
+.manager {
+  padding: 0;
+}
+
+.managerSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.managerSummary::-webkit-details-marker {
+  display: none;
+}
+
+/* A CSS-drawn triangle (font glyphs for ▸ vary) that turns when the section opens. */
+.managerSummary::before {
+  content: "";
+  align-self: center;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid var(--text-dim);
+  transition: transform 120ms ease-out;
+}
+
+.manager[open] .managerSummary::before {
+  transform: rotate(90deg);
+}
+
+.managerSummary :global(.panel-title) {
+  margin: 0;
+  color: var(--text);
+}
+
+.managerMeta {
+  font-size: 14px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.managerHint {
+  flex-basis: 100%;
+  font-size: 14px;
+  color: var(--text-faint);
+  padding-left: 22px;
+}
+
+.managerAdd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.managerAdd :global(.btn) {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.managerAdd :global(.input) {
+  flex: 1;
+  min-width: 0;
+  padding-block: 8px;
+}
+
+.managerRule {
+  margin: 12px 20px 0;
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+.topicList {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0 20px 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.topicRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
+}
+
+.topicRow[data-hidden] .topicName {
+  color: var(--text-dim);
+}
+
+.topicName {
+  overflow-wrap: anywhere;
+}
+
+.topicInput {
+  padding-block: 6px;
+}
+
+.topicMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hiddenBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border: 2px solid var(--outline);
+  background: var(--panel-inset);
+  color: var(--text-dim);
+}
+
+.topicActions {
+  display: flex;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .topicRow {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .topicMeta,
+  .topicActions {
+    grid-column: 2;
+  }
 }

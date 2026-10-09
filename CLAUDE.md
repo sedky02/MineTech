@@ -81,6 +81,7 @@ REJECTED        REJECTED
 - "Back where it came from" = `HOST_APPROVED` if `host_approved_at` is set, else `MODERATOR_APPROVED` (host queue). Remove and rollback both use this (`statusBeforeDisplay` in the questions service).
 - Lists are ordered by `position` (then `created_at`). Entering a list sets `position` to the current time (end of list); `PATCH /moderator/questions/reorder` permutes the positions of the given ids only. The host sees the first `MODERATOR_APPROVED` by position. The frontend mirrors this rule for optimistic updates (`applySubsetOrder` in `hooks/useQuestions.ts`).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.
+- Topics (categories) are managed by the moderator (`src/categories/`): rename keeps the slug; a topic with questions can be hidden (`is_active`) but not deleted; at least one topic must stay visible. Changes emit `CATEGORIES_UPDATED` to the moderator room.
 - At most one question is `DISPLAYED` at a time. Displaying a new question auto-marks the current one `ANSWERED`, in the same transaction.
 - Remove, answer and "clear display" leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question.
 - There is no "End event" action (removed after an accidental use in production); Pause is the way to stop submissions. Don't reintroduce an irreversible event-level action.

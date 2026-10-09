@@ -164,6 +164,15 @@ export function QuestionForm() {
         // Paused in the meantime: refresh the banner.
         publicApi.eventStatus().then(setEventStatus).catch(() => undefined);
       }
+      if (e instanceof ApiError && e.status === 400 && e.message === "Invalid category") {
+        // The moderator hid or deleted this topic while the form was open:
+        // say so where the topic is picked, and show the current list.
+        setCategory("");
+        setFieldError({ field: "category", message: "That topic is no longer available. Pick another one." });
+        focusField("category");
+        publicApi.categories().then(setCategories, () => undefined);
+        return;
+      }
       setServerError(
         isServerFailure(e) ? "Your question was NOT sent. Please try again in a moment." : (e as Error).message,
       );
