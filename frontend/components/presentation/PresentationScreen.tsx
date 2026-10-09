@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
-import { WordmarkLogo } from "@/components/ui/Logo";
+import { ClubCredit, WordmarkLogo } from "@/components/ui/Logo";
 import { useSocket } from "@/hooks/useSocket";
 import { publicApi } from "@/lib/api/endpoints";
 import type { PublicQuestion } from "@/lib/api/types";
-import { CLUB_NAME, EVENT_NAME } from "@/lib/config";
+import { EVENT_NAME } from "@/lib/config";
 import { SocketEvent } from "@/lib/socket/events";
 import styles from "./presentation.module.css";
 
@@ -119,7 +119,6 @@ export function PresentationScreen() {
           <h1 className={styles.title}>
             <WordmarkLogo height={220} className={styles.titleLogo} />
           </h1>
-          {CLUB_NAME && <p className={styles.club}>{CLUB_NAME}</p>}
           {siteAddress && (
             <p className={styles.cta}>
               Ask your questions at <strong>{siteAddress}</strong>
@@ -127,6 +126,9 @@ export function PresentationScreen() {
           )}
         </section>
       )}
+
+      {/* Organizer credit along the bottom edge, like a title screen's credits. */}
+      {!question && <ClubCredit height={64} className={styles.credit} />}
 
       <div className={styles.ground} aria-hidden />
       {/* Tiny operator hint, only when the live connection is down. */}

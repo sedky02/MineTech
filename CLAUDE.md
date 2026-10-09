@@ -115,7 +115,7 @@ Single event, single backend instance. Do **not** introduce Redis, message queue
 
 - Backend listens on `process.env.PORT` and `0.0.0.0`, exposes `GET /health`, and shuts down gracefully (`app.enableShutdownHooks()`).
 - CORS: the exact Vercel origin from `CORS_ORIGIN`, never `*`, with credentials enabled.
-- Frontend reads only `NEXT_PUBLIC_*` variables (API/WS URLs, event/club name). Never put secrets there.
+- Frontend reads only `NEXT_PUBLIC_*` variables (API/WS URLs, event name). Never put secrets there.
 - Render build must be `npm ci --include=dev && npm run build` (the Nest CLI is a dev dependency).
 - Passwords: Argon2id. Cookies: HTTP-only; `Secure` + `SameSite=None` in production (different sites), `Lax` in development.
 

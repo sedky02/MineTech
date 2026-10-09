@@ -650,7 +650,6 @@ CORS must allow the actual Vercel origin. Never use `*` for authenticated produc
 NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com
 NEXT_PUBLIC_WS_URL=wss://your-render-service.onrender.com
 NEXT_PUBLIC_EVENT_NAME=MineTech
-NEXT_PUBLIC_CLUB_NAME=
 ```
 
 The idle presentation screen shows the site's own address ("Ask your questions at …"), read from the browser at runtime, so no URL needs configuring. Vercel project root directory: `frontend`.

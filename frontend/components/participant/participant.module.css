@@ -14,6 +14,7 @@
 .intro {
   margin: 0;
   color: var(--text-dim);
+  text-wrap: pretty;
 }
 
 .form {
@@ -55,6 +56,41 @@
   cursor: pointer;
   font-size: 16px;
   line-height: 1.2;
+}
+
+/* The label is the flex item that may shrink; words wrap between, never inside. */
+.category > span:last-child {
+  min-width: 0;
+}
+
+/* Phones: two topic columns leave ~95px for a label, less than "Cybersecurity" needs. */
+@media (max-width: 420px) {
+  .form {
+    padding: 16px 14px;
+  }
+
+  .categories {
+    gap: 6px;
+  }
+
+  /* Colour block above the label, like an inventory slot: the label gets the
+     tile's full width, so long words ("Cybersecurity") fit without breaking. */
+  .category {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    font-size: 15px;
+  }
+}
+
+/* Smallest phones (320px): one notch smaller so "Cybersecurity" still fits. */
+@media (max-width: 340px) {
+  .category {
+    padding: 8px 7px;
+    font-size: 14px;
+  }
 }
 
 .category:hover {
@@ -125,6 +161,16 @@
 
 .footer p {
   margin: 0;
+  /* Avoid a lone word on the last line ("screen."). */
+  text-wrap: balance;
+}
+
+/* Organizer credit: set apart from the page's own links and notes. */
+.credit {
+  margin-top: 18px;
+  padding-top: 22px;
+  border-top: 3px solid var(--outline);
+  width: 100%;
 }
 
 .screenLink {

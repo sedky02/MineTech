@@ -75,16 +75,28 @@
   line-height: 0;
 }
 
-.club {
-  margin: 0;
-  font-size: clamp(18px, 2vw, 36px);
-  color: var(--text-dim);
+.credit {
+  position: absolute;
+  left: 50%;
+  bottom: calc(6vh + 3vh);
+  transform: translateX(-50%);
+}
+
+.credit img {
+  width: min(40vw, 520px);
+  height: auto;
+}
+
+/* The shared label is sized for phones; scale it for the back of the room. */
+.credit span {
+  font-size: clamp(14px, 1.2vw, 22px);
 }
 
 .cta {
-  margin: 2vh 0 0;
-  font-size: clamp(16px, 1.8vw, 32px);
-  color: var(--text-dim);
+  margin: 1vh 0 0;
+  font-size: clamp(20px, 2.4vw, 46px);
+  color: var(--text);
+  text-shadow: 0.08em 0.08em 0 var(--outline);
 }
 
 .cta strong {

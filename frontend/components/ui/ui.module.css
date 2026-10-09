@@ -24,6 +24,20 @@
   height: auto;
 }
 
+.credit {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+/* Small uppercase label: a touch of positive tracking keeps it legible. */
+.creditLabel {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
 .wordmarkSubtitle {
   color: var(--text-dim);
   font-size: 15px;

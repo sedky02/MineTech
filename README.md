@@ -120,7 +120,6 @@ EVENT_STARTS_AT=2026-11-15T14:00:00+01:00
 NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com
 NEXT_PUBLIC_WS_URL=wss://your-render-service.onrender.com
 NEXT_PUBLIC_EVENT_NAME=MineTech
-NEXT_PUBLIC_CLUB_NAME=Your Club
 ```
 
 Never put secrets in `NEXT_PUBLIC_*` variables. They are visible in the browser.
@@ -129,7 +128,7 @@ Never put secrets in `NEXT_PUBLIC_*` variables. They are visible in the browser.
 
 ## Branding
 
-The MineTech wordmark is `frontend/public/MineTechLogo.svg` (headers and projector). The square grass block, `frontend/public/logo.svg` and `frontend/app/icon.svg`, is used for the browser tab icon and small square spots. Headings use the Minecraft Ten font from `frontend/public/fonts/minecraft-ten.ttf` ("Freeware, Non-Commercial", from FontSpace). That folder is git-ignored, so a deploy from git falls back to Press Start 2P; to use Minecraft Ten in production, remove `frontend/public/fonts/` from `.gitignore` and commit the file, if its license fits your use. The event name and club name come from the `NEXT_PUBLIC_*` variables above. The projector's idle screen shows the site's own address ("Ask your questions at …"), so it is always correct for whatever domain you deploy to.
+The MineTech wordmark is `frontend/public/MineTechLogo.svg` (headers and projector). The square grass block, `frontend/public/logo.svg` and `frontend/app/icon.svg`, is used for the browser tab icon and small square spots. Headings use the Minecraft Ten font from `frontend/public/fonts/minecraft-ten.ttf` ("Freeware, Non-Commercial", from FontSpace). That folder is git-ignored, so a deploy from git falls back to Press Start 2P; to use Minecraft Ten in production, remove `frontend/public/fonts/` from `.gitignore` and commit the file, if its license fits your use. The club's logo (`frontend/public/GDGC-White.svg`, white version for the dark theme) sits under the MineTech logo on the home page and on the projector's idle screen; `GDGC-Black.svg` and `GDGC-Brackets.svg` are spare variants. The event name comes from `NEXT_PUBLIC_EVENT_NAME`. The projector's idle screen shows the site's own address ("Ask your questions at …"), so it is always correct for whatever domain you deploy to.
 
 ## Documentation
 
