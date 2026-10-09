@@ -224,6 +224,13 @@ Dedicated full-screen route: `/presentation`
 
 **No controls** are visible, apart from a small back-arrow button (top left) that returns to the question form. It fades out with the mouse cursor after 2.5 s without movement, so it disappears on the projector; on phones it stays visible. When the moderator clicks **Display**, the screen updates in real time.
 
+### Transitions
+
+- **Appearing:** the question card eases in over 500ms (fades up from 90% size, no bounce).
+- **Disappearing** (removed, answered or cleared): the card stays on screen for 280ms and animates out over 240ms (fades and shrinks to 94%), while the idle logo and club credit fade in underneath it, so the screen never goes empty. Exits are quicker than entrances.
+- **Replaced** by another question (for example, answered then displayed in quick succession): the new card appears straight away, with no flash of the idle logo.
+- With "reduce motion" enabled, all of these are instant.
+
 ### Idle screen
 
 When no question is `DISPLAYED`, the presentation shows the **event logo and event name**. This happens:

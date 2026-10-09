@@ -24,6 +24,8 @@ const questionFont = Google_Sans({
 });
 
 const CURSOR_HIDE_MS = 2500;
+/** How long a cleared question stays mounted to animate out: a little longer than the 240ms CSS exit. */
+const EXIT_MS = 280;
 
 const noSubscription = () => () => undefined;
 
@@ -34,6 +36,40 @@ const noSubscription = () => () => undefined;
  */
 function useSiteAddress() {
   return useSyncExternalStore(noSubscription, () => window.location.host, () => "");
+}
+
+/**
+ * Keeps the last question mounted for a moment after it clears, so it can
+ * animate out instead of vanishing. `shown` is the question to render and
+ * `leaving` is true while it exits. A new question replaces it immediately.
+ */
+function useDepartingQuestion(question: PublicQuestion | null) {
+  const [shown, setShown] = useState<PublicQuestion | null>(question);
+  const [leaving, setLeaving] = useState(false);
+  const [previous, setPrevious] = useState(question);
+
+  // Reacting to a changed value while rendering (rather than in an effect)
+  // means no frame is ever painted with the old output.
+  if (question !== previous) {
+    setPrevious(question);
+    if (question) {
+      setShown(question);
+      setLeaving(false);
+    } else if (shown) {
+      setLeaving(true);
+    }
+  }
+
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = setTimeout(() => {
+      setShown(null);
+      setLeaving(false);
+    }, EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [leaving]);
+
+  return { shown, leaving };
 }
 
 /** Bigger text for shorter questions so everything stays readable from the back row. */
@@ -52,6 +88,7 @@ export function PresentationScreen() {
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [cursorHidden, setCursorHidden] = useState(false);
   const siteAddress = useSiteAddress();
+  const { shown, leaving } = useDepartingQuestion(question);
   // Bumped on every socket event so an older REST response can't overwrite newer state.
   const version = useRef(0);
 
@@ -114,18 +151,26 @@ export function PresentationScreen() {
         </svg>
       </Link>
 
-      {question ? (
-        <section key={question.id} className={styles.question} aria-live="polite">
+      {/* The card stays mounted while it animates out; the idle logo fades in underneath it. */}
+      {shown && (
+        <section
+          key={shown.id}
+          className={`${styles.question} ${leaving ? styles.leaving : ""}`}
+          aria-live="polite"
+          aria-hidden={leaving || undefined}
+        >
           <div className={styles.questionHeader}>
-            <CategoryTag category={question.category} large />
+            <CategoryTag category={shown.category} large />
             <WordmarkLogo height={36} className={styles.brand} />
           </div>
-          <p className={styles.text} data-size={sizeFor(question.content.length)}>
-            {question.content}
+          <p className={styles.text} data-size={sizeFor(shown.content.length)}>
+            {shown.content}
           </p>
-          <p className={styles.author}>{question.displayName ?? "Anonymous"}</p>
+          <p className={styles.author}>{shown.displayName ?? "Anonymous"}</p>
         </section>
-      ) : (
+      )}
+
+      {!question && (
         <section className={styles.idle} aria-label={EVENT_NAME}>
           <h1 className={styles.title}>
             <WordmarkLogo height={220} className={styles.titleLogo} />
