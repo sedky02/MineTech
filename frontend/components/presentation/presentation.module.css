@@ -4,28 +4,12 @@
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: linear-gradient(#0b0d1a, #161a33 70%, #1d2242);
+  /* Transparent: the shared animated sky (MinecraftSky) shows through. */
   color: var(--text);
 }
 
 .screen[data-cursor-hidden="true"] {
   cursor: none;
-}
-
-/* Pixel stars */
-.stars {
-  position: absolute;
-  inset: 0 0 30% 0;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.8) 1.5px, transparent 2px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.45) 1.5px, transparent 2px);
-  background-size:
-    180px 140px,
-    110px 90px;
-  background-position:
-    20px 30px,
-    70px 60px;
-  opacity: 0.5;
 }
 
 /* Grass + dirt strip along the bottom edge */

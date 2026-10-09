@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Pixelify_Sans, Press_Start_2P } from "next/font/google";
+import { MinecraftSky } from "@/components/ui/MinecraftSky";
 import { EVENT_NAME } from "@/lib/config";
 import "./globals.css";
 
@@ -28,7 +29,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${pressStart.variable} ${pixelify.variable}`}>
-      <body>{children}</body>
+      <body>
+        <MinecraftSky />
+        {children}
+      </body>
     </html>
   );
 }

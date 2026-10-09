@@ -1,0 +1,187 @@
+/*
+ * Minecraft overworld at night, behind every page: a sky gradient, pixel
+ * stars that blink on their own rhythms, a square moon, and blocky clouds
+ * drifting one way, like Minecraft's. Kept faint and slow so content stays
+ * the focus; content panels are opaque. Only transform and opacity animate.
+ * With "reduce motion" the scene stays, frozen in place.
+ */
+
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg, #0b0d1a 0%, #12162b 55%, #191d36 100%);
+}
+
+/* ------------------------------------------------------------------ stars */
+
+/* One 2px "star" per element, copied around the sky with box-shadows. */
+.stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  background: transparent;
+  animation: twinkle 7s steps(1) infinite;
+}
+
+.starsA {
+  box-shadow:
+    63.7vw 3.2vh 0 0 rgba(255, 255, 255, 0.75),
+    28.0vw 20.9vh 0 0 rgba(255, 255, 255, 0.75),
+    73.2vw 61.2vh 0 0 rgba(255, 255, 255, 0.75),
+    88.4vw 8.7vh 0 0 rgba(255, 255, 255, 0.75),
+    42.3vw 3.7vh 0 0 rgba(255, 255, 255, 0.75),
+    22.4vw 46.0vh 0 0 rgba(255, 255, 255, 0.75),
+    3.6vw 18.7vh 0 0 rgba(255, 255, 255, 0.75),
+    64.7vw 49.5vh 0 0 rgba(255, 255, 255, 0.75),
+    22.6vw 53.4vh 0 0 rgba(255, 255, 255, 0.75),
+    80.3vw 1.6vh 0 0 rgba(255, 255, 255, 0.75),
+    80.0vw 63.1vh 0 0 rgba(255, 255, 255, 0.75),
+    34.3vw 14.8vh 0 0 rgba(255, 255, 255, 0.75),
+    94.8vw 31.0vh 0 0 rgba(255, 255, 255, 0.75),
+    10.1vw 9.6vh 0 0 rgba(255, 255, 255, 0.75),
+    84.1vw 54.7vh 0 0 rgba(255, 255, 255, 0.75),
+    80.1vw 65.9vh 0 0 rgba(255, 255, 255, 0.75),
+    53.6vw 87.6vh 0 0 rgba(255, 255, 255, 0.75),
+    38.1vw 50.1vh 0 0 rgba(255, 255, 255, 0.75),
+    82.3vw 56.0vh 0 0 rgba(255, 255, 255, 0.75),
+    85.4vw 52.4vh 0 0 rgba(255, 255, 255, 0.75),
+    70.0vw 5.1vh 0 0 rgba(255, 255, 255, 0.75),
+    23.3vw 26.8vh 0 0 rgba(255, 255, 255, 0.75),
+    8.8vw 21.7vh 0 0 rgba(255, 255, 255, 0.75),
+    10.9vw 25.7vh 0 0 rgba(255, 255, 255, 0.75),
+    63.3vw 33.5vh 0 0 rgba(255, 255, 255, 0.75),
+    37.3vw 19.6vh 0 0 rgba(255, 255, 255, 0.75);
+}
+
+.starsB {
+  box-shadow:
+    27.2vw 84.4vh 0 0 rgba(220, 228, 255, 0.55),
+    64.5vw 55.2vh 0 0 rgba(220, 228, 255, 0.55),
+    17.8vw 65.9vh 0 0 rgba(220, 228, 255, 0.55),
+    17.0vw 34.8vh 0 0 rgba(220, 228, 255, 0.55),
+    98.0vw 58.0vh 0 0 rgba(220, 228, 255, 0.55),
+    55.6vw 61.9vh 0 0 rgba(220, 228, 255, 0.55),
+    83.6vw 70.1vh 0 0 rgba(220, 228, 255, 0.55),
+    23.4vw 3.9vh 0 0 rgba(220, 228, 255, 0.55),
+    31.9vw 24.8vh 0 0 rgba(220, 228, 255, 0.55),
+    21.7vw 84.9vh 0 0 rgba(220, 228, 255, 0.55),
+    86.9vw 29.0vh 0 0 rgba(220, 228, 255, 0.55),
+    65.2vw 36.2vh 0 0 rgba(220, 228, 255, 0.55),
+    90.6vw 41.8vh 0 0 rgba(220, 228, 255, 0.55),
+    27.0vw 22.9vh 0 0 rgba(220, 228, 255, 0.55),
+    56.0vw 24.4vh 0 0 rgba(220, 228, 255, 0.55),
+    58.3vw 80.9vh 0 0 rgba(220, 228, 255, 0.55),
+    40.1vw 20.5vh 0 0 rgba(220, 228, 255, 0.55),
+    98.8vw 46.3vh 0 0 rgba(220, 228, 255, 0.55),
+    9.9vw 5.2vh 0 0 rgba(220, 228, 255, 0.55),
+    11.7vw 56.8vh 0 0 rgba(220, 228, 255, 0.55),
+    78.6vw 38.6vh 0 0 rgba(220, 228, 255, 0.55),
+    7.2vw 35.0vh 0 0 rgba(220, 228, 255, 0.55);
+  animation-duration: 9s;
+  animation-delay: -3s;
+}
+
+/* A few brighter, chunkier stars */
+.starsC {
+  width: 3px;
+  height: 3px;
+  box-shadow:
+    98.6vw 48.1vh 0 0 rgba(255, 246, 214, 0.6),
+    96.2vw 77.6vh 0 0 rgba(255, 246, 214, 0.6),
+    2.1vw 65.1vh 0 0 rgba(255, 246, 214, 0.6),
+    67.8vw 48.8vh 0 0 rgba(255, 246, 214, 0.6),
+    27.1vw 58.0vh 0 0 rgba(255, 246, 214, 0.6),
+    11.9vw 39.7vh 0 0 rgba(255, 246, 214, 0.6),
+    45.5vw 85.9vh 0 0 rgba(255, 246, 214, 0.6),
+    86.8vw 24.4vh 0 0 rgba(255, 246, 214, 0.6),
+    50.1vw 16.9vh 0 0 rgba(255, 246, 214, 0.6),
+    90.4vw 78.5vh 0 0 rgba(255, 246, 214, 0.6),
+    30.2vw 57.9vh 0 0 rgba(255, 246, 214, 0.6),
+    60.7vw 14.6vh 0 0 rgba(255, 246, 214, 0.6),
+    75.7vw 49.0vh 0 0 rgba(255, 246, 214, 0.6),
+    77.3vw 48.2vh 0 0 rgba(255, 246, 214, 0.6),
+    1.1vw 29.8vh 0 0 rgba(255, 246, 214, 0.6),
+    2.9vw 83.7vh 0 0 rgba(255, 246, 214, 0.6),
+    87.1vw 75.0vh 0 0 rgba(255, 246, 214, 0.6),
+    31.1vw 6.2vh 0 0 rgba(255, 246, 214, 0.6);
+  animation-duration: 11s;
+  animation-delay: -6s;
+}
+
+/* Mostly steady, with a quick blink: a twinkle, not a slow pulse. */
+@keyframes twinkle {
+  0%,
+  88%,
+  100% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.25;
+  }
+  93% {
+    opacity: 0.7;
+  }
+}
+
+/* ------------------------------------------------------------------- moon */
+
+.moon {
+  position: absolute;
+  top: 9vh;
+  right: 7vw;
+  width: 56px;
+  height: 56px;
+  background: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 8 8%22 shape-rendering=%22crispEdges%22%3E%3Crect x=%220%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%222%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%223%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%224%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%225%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%226%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%222%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%223%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%224%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%225%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%226%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%222%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%223%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%224%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%225%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%226%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%222%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%223%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%224%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%225%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%226%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%222%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%223%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%224%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%225%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%226%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%222%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%223%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%224%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%225%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%226%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%222%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%223%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23cfc9a6%22/%3E%3Crect x=%224%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%225%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%226%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%226%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%220%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%221%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%222%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%223%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%224%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%225%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%226%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3Crect x=%227%22 y=%227%22 width=%221%22 height=%221%22 fill=%22%23f4f1dc%22/%3E%3C/svg%3E") center / cover;
+  image-rendering: pixelated;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 18px rgba(244, 241, 220, 0.25));
+}
+
+/* ----------------------------------------------------------------- clouds */
+
+.cloud {
+  position: absolute;
+  left: 0;
+  top: var(--top);
+  width: var(--w);
+  aspect-ratio: 20 / 6;
+  background: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 6%22 shape-rendering=%22crispEdges%22%3E%3Crect x=%226%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%227%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%228%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%229%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2210%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2211%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2212%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2213%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2214%22 y=%220%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%223%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%224%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%225%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%226%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%227%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%228%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%229%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2210%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2211%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2212%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2213%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2214%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2215%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2216%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2217%22 y=%221%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%221%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%222%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%223%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%224%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%225%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%226%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%227%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%228%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%229%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2210%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2211%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2212%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2213%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2214%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2215%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2216%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2217%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2218%22 y=%222%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%220%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%221%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%222%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%223%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%224%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%225%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%226%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%227%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%228%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%229%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2210%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2211%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2212%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2213%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2214%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2215%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2216%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2217%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2218%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2219%22 y=%223%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%220%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%221%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%222%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%223%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%224%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%225%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%226%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%227%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%228%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%229%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2210%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2211%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2212%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2213%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2214%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2215%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2216%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2217%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2218%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%2219%22 y=%224%22 width=%221%22 height=%221%22 fill=%22%23ffffff%22/%3E%3Crect x=%221%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%222%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%223%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%224%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%225%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%226%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%227%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%228%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%229%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2210%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2211%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2212%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2213%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2214%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2215%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2216%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2217%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3Crect x=%2218%22 y=%225%22 width=%221%22 height=%221%22 fill=%22%23c9cfe8%22/%3E%3C/svg%3E") center / 100% 100%;
+  image-rendering: pixelated;
+  opacity: var(--alpha);
+  will-change: transform;
+  /* Negative delays: clouds are already spread across the sky on first paint. */
+  animation: drift var(--duration) linear var(--delay) infinite;
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(calc(-1 * var(--w)));
+  }
+  to {
+    transform: translateX(100vw);
+  }
+}
+
+/* Phones: the moon would sit behind the logo, and the margins are narrow. */
+@media (max-width: 640px) {
+  .moon {
+    display: none;
+  }
+}
+
+/* Same scene, no motion: clouds rest at fixed spots, stars stop blinking. */
+@media (prefers-reduced-motion: reduce) {
+  .stars {
+    animation: none !important;
+  }
+
+  .cloud {
+    animation: none !important;
+    transform: translateX(var(--rest));
+  }
+}

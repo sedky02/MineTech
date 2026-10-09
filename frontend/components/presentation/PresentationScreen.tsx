@@ -94,7 +94,6 @@ export function PresentationScreen() {
 
   return (
     <main className={styles.screen} data-cursor-hidden={cursorHidden}>
-      <div className={styles.stars} aria-hidden />
 
       {/* Back to the question form. Fades out with the cursor, so it disappears on the projector. */}
       <Link href="/" className={`btn btn-quiet ${styles.back}`} aria-label="Back to ask a question" title="Ask a question">

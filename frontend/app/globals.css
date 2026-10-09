@@ -67,12 +67,8 @@ body {
 }
 
 body {
+  /* The animated night sky (components/ui/MinecraftSky) is drawn behind everything. */
   background-color: var(--bg);
-  /* Faint block grid, like looking at a wall of deepslate. */
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 2px, transparent 2px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 2px, transparent 2px);
-  background-size: 48px 48px;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 18px;
