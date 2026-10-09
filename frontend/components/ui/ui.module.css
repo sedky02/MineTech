@@ -5,20 +5,26 @@
 }
 
 .wordmark {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
 }
 
+/* Holds the logo image only: no text metrics around it. */
 .wordmarkTitle {
-  font-family: var(--font-display);
-  font-size: 18px;
-  color: var(--text);
-  text-shadow: 3px 3px 0 var(--outline);
+  margin: 0;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.wordmarkLogo {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .wordmarkSubtitle {
-  margin-top: 6px;
   color: var(--text-dim);
   font-size: 15px;
 }

@@ -124,5 +124,6 @@ Single event, single backend instance. Do **not** introduce Redis, message queue
 Minecraft-inspired: pixel/block UI, club logo, event marketing assets. The participant page is mobile-first. The presentation page must be readable from the back of a lecture hall on a projector.
 
 - Theme tokens and block primitives (`.btn`, `.panel`, `.input`, `.alert`) are in `frontend/app/globals.css`; page styles are CSS modules next to their components.
-- Fonts: Press Start 2P (headings/wordmark only) and Pixelify Sans (everything else). Ligatures are disabled globally because Pixelify's "fi" reads as "A".
-- `frontend/public/logo.svg` (and `app/icon.svg`) is a placeholder grass block: replace it with the club logo.
+- Fonts: `--font-display` (headings, panel titles, category tags) is Minecraft Ten, falling back to Press Start 2P; Pixelify Sans is everything else, including student questions (it covers accented letters). Ligatures are disabled globally because Pixelify's "fi" reads as "A".
+- Minecraft Ten (FontSpace, "Freeware, Non-Commercial", no accented letters) lives at `public/fonts/minecraft-ten.ttf`, which is **git-ignored** so it isn't redistributed through the repo. `globals.css` loads it via `@font-face` with `size-adjust: 143%` (matches Press Start 2P's cap height, which the heading sizes were tuned for). Without the file (e.g. a deploy from git), headings fall back to Press Start 2P.
+- Logo: `public/MineTechLogo.svg` (wide MINETECH wordmark, ~5:1) via `WordmarkLogo`/`Wordmark` in `components/ui/Logo.tsx`, used in page headers and on the projector. `public/logo.svg` (and `app/icon.svg`) is the square grass-block icon for small square spots (favicon, loading, empty states).

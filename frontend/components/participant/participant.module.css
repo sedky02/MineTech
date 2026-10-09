@@ -19,6 +19,14 @@
 .form {
   display: grid;
   gap: 22px;
+  animation: arrive 180ms ease-out both;
+}
+
+/* The form and the "sent" panel swap places: fade the new one in so the change reads as a result. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
 }
 
 .fieldset {
@@ -53,6 +61,11 @@
   background: #262834;
 }
 
+/* Instant feedback on press, before the tap is released. */
+.category:active {
+  transform: scale(0.98);
+}
+
 .category[data-selected="true"] {
   border-color: var(--gold);
   background: #2f2b1d;
@@ -70,6 +83,7 @@
 }
 
 .confirmation {
+  animation: arrive 180ms ease-out both;
   display: grid;
   gap: 12px;
   justify-items: center;

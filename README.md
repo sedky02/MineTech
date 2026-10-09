@@ -129,7 +129,7 @@ Never put secrets in `NEXT_PUBLIC_*` variables. They are visible in the browser.
 
 ## Branding
 
-Replace `frontend/public/logo.svg` and `frontend/app/icon.svg` with the club logo (square works best). The event name and club name come from the `NEXT_PUBLIC_*` variables above. The projector's idle screen shows the site's own address ("Ask your questions at …"), so it is always correct for whatever domain you deploy to.
+The MineTech wordmark is `frontend/public/MineTechLogo.svg` (headers and projector). The square grass block, `frontend/public/logo.svg` and `frontend/app/icon.svg`, is used for the browser tab icon and small square spots. Headings use the Minecraft Ten font from `frontend/public/fonts/minecraft-ten.ttf` ("Freeware, Non-Commercial", from FontSpace). That folder is git-ignored, so a deploy from git falls back to Press Start 2P; to use Minecraft Ten in production, remove `frontend/public/fonts/` from `.gitignore` and commit the file, if its license fits your use. The event name and club name come from the `NEXT_PUBLIC_*` variables above. The projector's idle screen shows the site's own address ("Ask your questions at …"), so it is always correct for whatever domain you deploy to.
 
 ## Documentation
 

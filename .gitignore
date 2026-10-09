@@ -12,3 +12,6 @@ coverage/
 
 # Generated Prisma client (rebuilt by `prisma generate`)
 backend/src/generated/
+
+# Minecraft Ten (non-commercial freeware): kept local, not redistributed via the repo
+frontend/public/fonts/

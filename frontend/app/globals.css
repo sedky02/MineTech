@@ -1,5 +1,24 @@
 /* MineTech — Minecraft-inspired theme (night-time deepslate, block bevels). */
 
+/*
+ * Minecraft Ten, for headings and display text only (body text and student
+ * questions stay in Pixelify Sans, which covers accented letters).
+ * The file (public/fonts/minecraft-ten.ttf, "Freeware, Non-Commercial" from
+ * FontSpace) is git-ignored, so it isn't redistributed through the repo.
+ * Without it, headings fall back to Press Start 2P (see --font-display).
+ * It has no accented letters; those fall back per character.
+ */
+@font-face {
+  font-family: "Minecraft Ten";
+  src:
+    local("Minecraft Ten"),
+    url("/fonts/minecraft-ten.ttf") format("truetype");
+  font-display: swap;
+  /* Heading sizes were tuned for Press Start 2P, whose capitals fill the em
+     (1.0); Minecraft Ten's are 0.70em. Scale it to the same cap height. */
+  size-adjust: 143%;
+}
+
 :root {
   --bg: #14151b;
   --bg-raised: #1c1e27;
@@ -29,7 +48,7 @@
 
   --pixel: 4px;
   --radius: 0;
-  --font-display: var(--font-press-start), "Courier New", monospace;
+  --font-display: "Minecraft Ten", var(--font-press-start), "Courier New", monospace;
   --font-body: var(--font-pixelify), system-ui, sans-serif;
 
   color-scheme: dark;
@@ -78,6 +97,17 @@ textarea,
 select {
   font: inherit;
   color: inherit;
+}
+
+/*
+ * Tappable controls give their own instant pressed state, so drop the
+ * browser's grey tap flash, and never wait to see if a tap is a double-tap.
+ */
+a,
+button,
+label {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 :focus-visible {

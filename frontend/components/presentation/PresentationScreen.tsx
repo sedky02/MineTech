@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
-import { Logo } from "@/components/ui/Logo";
+import { WordmarkLogo } from "@/components/ui/Logo";
 import { useSocket } from "@/hooks/useSocket";
 import { publicApi } from "@/lib/api/endpoints";
 import type { PublicQuestion } from "@/lib/api/types";
@@ -107,10 +107,7 @@ export function PresentationScreen() {
         <section key={question.id} className={styles.question} aria-live="polite">
           <div className={styles.questionHeader}>
             <CategoryTag category={question.category} large />
-            <div className={styles.brand}>
-              <Logo size={40} />
-              <span>{EVENT_NAME}</span>
-            </div>
+            <WordmarkLogo height={36} className={styles.brand} />
           </div>
           <p className={styles.text} data-size={sizeFor(question.content.length)}>
             {question.content}
@@ -119,8 +116,9 @@ export function PresentationScreen() {
         </section>
       ) : (
         <section className={styles.idle} aria-label={EVENT_NAME}>
-          <Logo size={220} />
-          <h1 className={styles.title}>{EVENT_NAME}</h1>
+          <h1 className={styles.title}>
+            <WordmarkLogo height={220} className={styles.titleLogo} />
+          </h1>
           {CLUB_NAME && <p className={styles.club}>{CLUB_NAME}</p>}
           {siteAddress && (
             <p className={styles.cta}>

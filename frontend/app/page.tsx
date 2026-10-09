@@ -8,7 +8,7 @@ export default function ParticipantPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Wordmark size={48} subtitle={CLUB_NAME || "Tech event Q&A"} titleAs="h1" />
+        <Wordmark size={64} subtitle={CLUB_NAME || "Tech event Q&A"} titleAs="h1" />
         <p className={styles.intro}>
           Ask the speakers anything about tech, studies or careers. Your question is anonymous unless you add your
           name.
