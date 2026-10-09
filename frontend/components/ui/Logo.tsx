@@ -17,12 +17,21 @@ export function Logo({ size = 48 }: { size?: number }) {
   );
 }
 
-export function Wordmark({ size = 40, subtitle }: { size?: number; subtitle?: string }) {
+export function Wordmark({
+  size = 40,
+  subtitle,
+  titleAs: Title = "div",
+}: {
+  size?: number;
+  subtitle?: string;
+  /** "h1" on pages where the event name is the page's main heading. */
+  titleAs?: "div" | "h1";
+}) {
   return (
     <div className={styles.wordmark}>
       <Logo size={size} />
       <div>
-        <div className={styles.wordmarkTitle}>{EVENT_NAME}</div>
+        <Title className={styles.wordmarkTitle}>{EVENT_NAME}</Title>
         {subtitle && <div className={styles.wordmarkSubtitle}>{subtitle}</div>}
       </div>
     </div>

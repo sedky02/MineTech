@@ -8,7 +8,7 @@ export default function ParticipantPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Wordmark size={48} subtitle={CLUB_NAME || "Tech event Q&A"} />
+        <Wordmark size={48} subtitle={CLUB_NAME || "Tech event Q&A"} titleAs="h1" />
         <p className={styles.intro}>
           Ask the speakers anything about tech, studies or careers. Your question is anonymous unless you add your
           name.
@@ -17,7 +17,8 @@ export default function ParticipantPage() {
       <QuestionForm />
       <footer className={styles.footer}>
         <Link href="/presentation" target="_blank" rel="noopener" className={`btn btn-quiet ${styles.screenLink}`}>
-          See what&apos;s on screen ↗
+          See what&apos;s on screen <span aria-hidden>↗</span>
+          <span className="sr-only">(opens in a new tab)</span>
         </Link>
         <p>Questions are reviewed before they appear on screen.</p>
       </footer>

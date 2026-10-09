@@ -11,7 +11,7 @@
 
   --text: #f3f3f0;
   --text-dim: #a8aab8;
-  --text-faint: #6d7080;
+  --text-faint: #9598a8; /* ≥ 4.5:1 on --panel, --bg and --panel-inset */
 
   --grass: #5fa83a;
   --grass-dark: #3f7d24;
@@ -163,7 +163,8 @@ select {
 }
 
 .btn-primary {
-  --btn-bg: var(--grass);
+  /* --grass-dark keeps the white label above 4.5:1 (5.04:1); --grass is 2.94:1. */
+  --btn-bg: var(--grass-dark);
 }
 .btn-danger {
   --btn-bg: var(--redstone);

@@ -117,3 +117,37 @@
   text-decoration: none;
   font-size: 16px;
 }
+
+.loading {
+  display: grid;
+  gap: 4px;
+}
+
+.loading p {
+  margin: 0;
+}
+
+/* Inline validation, right under the field it belongs to. */
+.fieldError {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 4px solid var(--redstone);
+  color: #ff8b78;
+  font-size: 16px;
+}
+
+.counter {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter[data-over] {
+  color: #ff8b78;
+  font-weight: 600;
+}
+
+.hint {
+  margin: -4px 0 0;
+}
