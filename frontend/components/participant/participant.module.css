@@ -280,3 +280,76 @@
     transform: translateY(12px);
   }
 }
+
+/* ------------------------------------------------------------ first launch */
+
+.brandSlot {
+  display: grid;
+}
+
+/* Everything under the logo; hidden until the logo has found its place. */
+.body {
+  display: grid;
+  gap: 24px;
+}
+
+/* The real header logo waits invisibly in its place: the splash logo is moved onto it. */
+.page:not([data-boot="done"]) .brandSlot {
+  visibility: hidden;
+}
+
+.page[data-boot="loading"] .body {
+  opacity: 0;
+}
+
+.page[data-boot="morphing"] .body {
+  opacity: 1;
+  transition: opacity 450ms ease-out 250ms;
+}
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.splashLogo {
+  width: min(86vw, 520px);
+  will-change: transform;
+}
+
+.splashBob {
+  animation: splash-bob 1.8s ease-in-out infinite;
+}
+
+.splashBob[data-still] {
+  animation: none;
+}
+
+.splashBob img {
+  width: 100%;
+  height: auto;
+  margin-block: 0;
+  filter: drop-shadow(6px 6px 0 rgba(0, 0, 0, 0.5));
+}
+
+@keyframes splash-bob {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.splashHint {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: calc(50% + 80px);
+  margin: 0;
+  text-align: center;
+  color: var(--text-dim);
+  text-wrap: balance;
+  animation: arrive 300ms ease-out both;
+}

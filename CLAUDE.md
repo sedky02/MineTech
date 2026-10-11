@@ -116,6 +116,7 @@ Single event, single backend instance. Do **not** introduce Redis, message queue
 
 - Backend listens on `process.env.PORT` and `0.0.0.0`, exposes `GET /health`, and shuts down gracefully (`app.enableShutdownHooks()`).
 - Render's free plan sleeps: every page pings `GET /health` once on first load (`components/ui/ServerWakeUp.tsx`, `lib/api/wake.ts`). If a question send hangs or fails because the server is asleep, the participant form shows a floating notice, checks `/health` until it answers, then says they can send again. It never re-sends by itself (no duplicate questions, rule 4).
+- First launch of the participant page: `components/participant/ParticipantShell.tsx` shows only the MineTech logo, centred, as the loading screen, then glides that same element onto the header logo (Web Animations API; skipped under reduced motion) and fades the form in. The last event status is cached in localStorage (`lib/participant-cache.ts`): a returning student gets the form at once while the server answers, and a failed refresh is ignored. The server stays the source of truth.
 - CORS: the exact Vercel origin from `CORS_ORIGIN`, never `*`, with credentials enabled.
 - Frontend reads only `NEXT_PUBLIC_*` variables (API/WS URLs, event name). Never put secrets there.
 - Render build must be `npm ci --include=dev && npm run build` (the Nest CLI is a dev dependency).

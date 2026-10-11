@@ -5,6 +5,7 @@ import { BlockSwatch } from "@/components/ui/CategoryTag";
 import { ApiError } from "@/lib/api/client";
 import { publicApi } from "@/lib/api/endpoints";
 import { isServerUp } from "@/lib/api/wake";
+import { readCachedEventStatus, writeCachedEventStatus } from "@/lib/participant-cache";
 import type { PublicEventStatus } from "@/lib/api/types";
 import { CATEGORIES } from "@/lib/categories";
 import {
@@ -14,6 +15,7 @@ import {
   QUESTION_MAX,
   validateQuestion,
 } from "@/lib/validation/question";
+import { useBoot } from "./ParticipantShell";
 import styles from "./participant.module.css";
 
 type LoadState = { status: "loading" } | { status: "error"; message: string } | { status: "ready" };
@@ -38,7 +40,9 @@ const ERROR_IDS: Record<QuestionField, string> = {
 };
 
 async function loadInitialData() {
-  return { eventStatus: await publicApi.eventStatus() };
+  const eventStatus = await publicApi.eventStatus();
+  writeCachedEventStatus(eventStatus);
+  return { eventStatus };
 }
 
 /** No answer, or the host's "not up yet" gateway errors: the server is asleep or starting. */
@@ -52,6 +56,7 @@ function isServerFailure(e: unknown) {
 }
 
 export function QuestionForm() {
+  const boot = useBoot();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [slowLoad, setSlowLoad] = useState(false);
   const [eventStatus, setEventStatus] = useState<PublicEventStatus>({ submissionsOpen: true });
@@ -74,6 +79,8 @@ export function QuestionForm() {
   const askAgainRef = useRef<HTMLButtonElement>(null);
   /** Set by "Ask another question", so focus only jumps to the field then, never on first load. */
   const returningRef = useRef(false);
+  /** The form was shown from the cached status; the server's answer is still on its way. */
+  const servedFromCache = useRef(false);
 
   const applyLoaded = useCallback((result: Awaited<ReturnType<typeof loadInitialData>>) => {
     setEventStatus(result.eventStatus);
@@ -81,6 +88,9 @@ export function QuestionForm() {
   }, []);
 
   const applyLoadError = useCallback((e: unknown) => {
+    // Already showing the form from the cache: a failed refresh isn't worth an error screen;
+    // sending a question reports a server problem on its own.
+    if (servedFromCache.current) return;
     setLoad({
       status: "error",
       message: isServerFailure(e)
@@ -92,8 +102,21 @@ export function QuestionForm() {
   }, []);
 
   useEffect(() => {
+    // A returning student gets the form at once from the last known status; the server's
+    // answer replaces it a moment later. Applied in a promise callback, never synchronously.
+    const cached = readCachedEventStatus();
+    if (cached) {
+      servedFromCache.current = true;
+      void Promise.resolve({ eventStatus: cached }).then(applyLoaded);
+    }
     loadInitialData().then(applyLoaded, applyLoadError);
   }, [applyLoaded, applyLoadError]);
+
+  // The form's first look is the logo splash (see ParticipantShell): tell it when we're ready.
+  const { ready: bootReady } = boot;
+  useEffect(() => {
+    if (load.status !== "loading") bootReady({ instant: servedFromCache.current });
+  }, [load.status, bootReady]);
 
   // The free hosting plan can take up to a minute to wake: say so instead of a bare "Loading…".
   useEffect(() => {
@@ -109,6 +132,7 @@ export function QuestionForm() {
     if (!closed) return;
     const recheck = () => {
       publicApi.eventStatus().then((status) => {
+        writeCachedEventStatus(status);
         setEventStatus(status);
         if (status.submissionsOpen) setReopened(true);
       }, () => undefined);
@@ -210,7 +234,13 @@ export function QuestionForm() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) {
         // Paused in the meantime: refresh the banner.
-        publicApi.eventStatus().then(setEventStatus).catch(() => undefined);
+        publicApi
+          .eventStatus()
+          .then((status) => {
+            writeCachedEventStatus(status);
+            setEventStatus(status);
+          })
+          .catch(() => undefined);
       }
       if (e instanceof ApiError && e.status === 400 && e.message === "Invalid category") {
         // Only if this page is older than the server's topic list (e.g. mid-deploy):
@@ -235,6 +265,8 @@ export function QuestionForm() {
   }
 
   if (load.status === "loading") {
+    // First launch: the centred logo is the loading screen. Only a retry shows this.
+    if (boot.phase !== "done") return null;
     return (
       <div className={styles.loading} role="status">
         <p className="muted">Loading…</p>
