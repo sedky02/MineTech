@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   HttpException,
@@ -8,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '../generated/prisma/client.js';
+import { Prisma, type Question } from '../generated/prisma/client.js';
 import { QuestionSource, QuestionStatus } from '../generated/prisma/enums.js';
 import {
   SUBMISSION_COOLDOWN_MS,
@@ -19,12 +18,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
 import { Room, SocketEvent } from '../realtime/realtime.events.js';
 import type { CreateQuestionDto } from './dto/create-question.dto.js';
-import {
-  type QuestionWithCategory,
-  toModeratorView,
-  toPublicView,
-  withCategory,
-} from './question.views.js';
+import { toModeratorView, toPublicView } from './question.views.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -42,11 +36,11 @@ const listOrder: Prisma.QuestionOrderByWithRelationInput[] = [
 
 interface DisplayChange {
   /** Was on screen and is now answered. */
-  answered: QuestionWithCategory | null;
+  answered: Question | null;
   /** Was on screen and went back to where it came from. */
-  removed: QuestionWithCategory | null;
+  removed: Question | null;
   /** Now on screen. */
-  current: QuestionWithCategory;
+  current: Question;
 }
 
 /**
@@ -91,17 +85,12 @@ export class QuestionsService {
         throw new ForbiddenException('Submissions are paused');
       }
 
-      const category = await tx.category.findFirst({
-        where: { slug: input.category, isActive: true },
-      });
-      if (!category) throw new BadRequestException('Invalid category');
-
       const now = new Date();
       await this.enforceSessionLimits(tx, participantSessionId, now);
 
       return tx.question.create({
         data: {
-          categoryId: category.id,
+          category: input.category,
           content: input.content,
           displayName: input.displayName ?? null,
           participantSessionId,
@@ -112,7 +101,6 @@ export class QuestionsService {
           createdAt: now,
           position: now.getTime(),
         },
-        include: withCategory,
       });
     });
 
@@ -308,7 +296,6 @@ export class QuestionsService {
       this.prisma.question.findMany({
         where: { status },
         orderBy: listOrder,
-        include: withCategory,
       });
 
     const [pending, awaitingHost, ready, displayed, previous, finished] =
@@ -318,12 +305,10 @@ export class QuestionsService {
         byStatus(QuestionStatus.HOST_APPROVED),
         this.prisma.question.findFirst({
           where: { status: QuestionStatus.DISPLAYED },
-          include: withCategory,
         }),
         this.prisma.question.findFirst({
           where: { status: QuestionStatus.ANSWERED },
           orderBy: { answeredAt: 'desc' },
-          include: withCategory,
         }),
         this.prisma.question.groupBy({
           by: ['status'],
@@ -406,7 +391,6 @@ export class QuestionsService {
     const question = await this.prisma.question.findFirst({
       where: { status: QuestionStatus.MODERATOR_APPROVED },
       orderBy: listOrder,
-      include: withCategory,
     });
     return { question: question ? toPublicView(question) : null };
   }
@@ -453,7 +437,6 @@ export class QuestionsService {
   async currentlyDisplayed() {
     const question = await this.prisma.question.findFirst({
       where: { status: QuestionStatus.DISPLAYED },
-      include: withCategory,
     });
     return { question: question ? toPublicView(question) : null };
   }
@@ -465,7 +448,7 @@ export class QuestionsService {
     id: string,
     from: QuestionStatus | QuestionStatus[],
     data: Prisma.QuestionUpdateManyMutationInput,
-  ): Promise<QuestionWithCategory> {
+  ): Promise<Question> {
     const expected = Array.isArray(from) ? from : [from];
     const { count } = await db.question.updateMany({
       where: { id, status: { in: expected } },
@@ -483,7 +466,6 @@ export class QuestionsService {
     }
     return db.question.findUniqueOrThrow({
       where: { id },
-      include: withCategory,
     });
   }
 
@@ -520,7 +502,7 @@ export class QuestionsService {
     );
   }
 
-  private emitRemoved(question: QuestionWithCategory) {
+  private emitRemoved(question: Question) {
     this.realtime.emit(Room.PRESENTATION, SocketEvent.QUESTION_REMOVED, {
       id: question.id,
     });
@@ -539,7 +521,7 @@ export class QuestionsService {
     }
   }
 
-  private emitAnswered(question: QuestionWithCategory) {
+  private emitAnswered(question: Question) {
     this.realtime.emit(Room.PRESENTATION, SocketEvent.QUESTION_ANSWERED, {
       id: question.id,
     });

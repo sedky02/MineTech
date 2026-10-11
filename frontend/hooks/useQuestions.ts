@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { moderatorApi } from "@/lib/api/endpoints";
-import type { EventStatus, ModeratorCategory, ModeratorDashboard, ModeratorQuestion } from "@/lib/api/types";
+import type { EventStatus, ModeratorDashboard, ModeratorQuestion } from "@/lib/api/types";
 import { useSocket } from "./useSocket";
 
 const EVENT_DEBOUNCE_MS = 80;
@@ -28,7 +28,6 @@ export function applySubsetOrder(list: ModeratorQuestion[], orderedIds: string[]
 export function useModeratorQuestions(enabled: boolean) {
   const [dashboard, setDashboard] = useState<ModeratorDashboard | null>(null);
   const [eventStatus, setEventStatus] = useState<EventStatus | null>(null);
-  const [categories, setCategories] = useState<ModeratorCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const lastRequest = useRef(0);
   const lastApplied = useRef(0);
@@ -37,17 +36,12 @@ export function useModeratorQuestions(enabled: boolean) {
   const refresh = useCallback(async () => {
     const id = ++lastRequest.current;
     try {
-      const [nextDashboard, nextStatus, nextCategories] = await Promise.all([
-        moderatorApi.dashboard(),
-        moderatorApi.eventStatus(),
-        moderatorApi.categories(),
-      ]);
+      const [nextDashboard, nextStatus] = await Promise.all([moderatorApi.dashboard(), moderatorApi.eventStatus()]);
       // Ignore responses that finish after a newer one was already applied.
       if (id < lastApplied.current) return;
       lastApplied.current = id;
       setDashboard(nextDashboard);
       setEventStatus(nextStatus);
-      setCategories(nextCategories);
       setError(null);
     } catch (e) {
       if (id >= lastApplied.current) setError(e instanceof Error ? e.message : "Failed to load questions");
@@ -70,5 +64,5 @@ export function useModeratorQuestions(enabled: boolean) {
     );
   }, []);
 
-  return { dashboard, eventStatus, categories, error, refresh, connection, reorderLocally };
+  return { dashboard, eventStatus, error, refresh, connection, reorderLocally };
 }

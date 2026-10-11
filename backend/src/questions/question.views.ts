@@ -1,20 +1,13 @@
-import type { Prisma } from '../generated/prisma/client.js';
-
-export const withCategory = {
-  category: { select: { name: true, slug: true } },
-} as const satisfies Prisma.QuestionInclude;
-
-export type QuestionWithCategory = Prisma.QuestionGetPayload<{
-  include: typeof withCategory;
-}>;
+import type { Question } from '../generated/prisma/client.js';
+import { categoryView } from '../common/categories.js';
 
 /** Everything except the participant session ID, which never leaves the server. */
-export function toModeratorView(q: QuestionWithCategory) {
+export function toModeratorView(q: Question) {
   return {
     id: q.id,
     content: q.content,
     displayName: q.displayName,
-    category: q.category,
+    category: categoryView(q.category),
     source: q.source,
     status: q.status,
     createdAt: q.createdAt,
@@ -28,12 +21,12 @@ export function toModeratorView(q: QuestionWithCategory) {
 }
 
 /** What the host and the presentation screen are allowed to see. */
-export function toPublicView(q: QuestionWithCategory) {
+export function toPublicView(q: Question) {
   return {
     id: q.id,
     content: q.content,
     displayName: q.displayName,
-    category: q.category,
+    category: categoryView(q.category),
   };
 }
 

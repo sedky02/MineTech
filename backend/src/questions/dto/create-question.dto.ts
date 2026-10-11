@@ -1,13 +1,13 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { CATEGORY_SLUGS } from '../../common/categories.js';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class CreateQuestionDto {
-  /** Category slug; checked against active categories in the service. */
-  @IsString()
-  @Length(1, 64)
+  /** Topic slug from the fixed list (src/common/categories.ts). */
+  @IsIn(CATEGORY_SLUGS, { message: 'Invalid category' })
   category: string;
 
   @Transform(trim)

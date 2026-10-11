@@ -6,9 +6,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "web-development": "var(--grass)",
   "ai-data": "var(--diamond)",
   cybersecurity: "var(--redstone)",
-  "devops-cloud": "var(--lapis)",
   "mobile-development": "var(--emerald)",
-  "software-engineering": "var(--iron)",
   "career-studies": "var(--gold)",
   general: "var(--stone)",
 };

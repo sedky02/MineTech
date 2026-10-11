@@ -55,16 +55,14 @@ After submission, show a simple confirmation only. Pre-event and live questions 
 
 | Name | Slug |
 | --- | --- |
-| Web Development | `web-development` |
-| AI & Data | `ai-data` |
-| Cybersecurity | `cybersecurity` |
-| DevOps & Cloud | `devops-cloud` |
-| Mobile Development | `mobile-development` |
-| Software Engineering | `software-engineering` |
-| Career & Studies | `career-studies` |
 | General | `general` |
+| Career & Studies | `career-studies` |
+| AI & Data | `ai-data` |
+| Web Development | `web-development` |
+| Cybersecurity | `cybersecurity` |
+| Mobile Development | `mobile-development` |
 
-These are the seeded defaults. The moderator manages topics from the dashboard (see [Moderator → Topics](#topics)).
+The list is fixed in code: `backend/src/common/categories.ts` (validation) and `frontend/lib/categories.ts` (the picker and the moderator filter; colours live in `components/ui/CategoryTag.tsx`) hold the same slugs, and a CHECK constraint on `questions.category` enforces them in the database. Changing it means editing both files and adding a migration that updates the constraint. DevOps & Cloud and Game Development were removed (their questions deleted by the `static_categories` migration), then Software Engineering (`drop_software_engineering`).
 
 ---
 
@@ -159,23 +157,10 @@ The moderator is the actual operator of the system.
 - Roll back (re-display the previous question)
 - Keyboard shortcuts on a focused question card: `A` send to host, `R` reject, `S` show on screen, `Alt+↑/↓` change priority. Focus moves to the next card after an action, so a burst of questions can be cleared without the mouse.
 - Every action confirms itself with a short toast; errors stay until dismissed. Only the card being acted on is disabled while a request runs.
-- Manage topics (see [Topics](#topics) below)
 - Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
 - Pause / Resume submissions
 
 The moderator decides when a question appears on the presentation.
-
-### Topics
-
-A collapsible **Topics** section at the bottom of the dashboard (set-up work, so it stays out of the live queue):
-
-- **Add** a topic: 1–40 characters, unique (case-insensitive). Its slug is generated from the name ("AI & Data" → `ai-data`; `-2`, `-3`… if taken) and appended to the end of the list.
-- **Rename**: changes the display name only. The slug never changes, because questions, colours and filters refer to it.
-- **Hide / Show**: hidden topics disappear from the student form (`is_active = false`); their questions keep the topic and can still be filtered.
-- **Delete**: only for topics with **no** questions. A used topic must be hidden instead (`409` otherwise).
-- At least one topic always stays visible: hiding or deleting the last visible one returns `409` (the button is disabled too).
-- New topics without a colour of their own get the fallback block colour (amethyst).
-- If a topic is hidden or deleted while a student has the form open, their submit gets "That topic is no longer available. Pick another one." under the topics, the list refreshes, and their question text is kept.
 
 ### Emergency controls
 
@@ -269,7 +254,7 @@ Never ban by IP alone: many university users share the same public IP through NA
 | --- | --- |
 | `content` | Required, not blank: 1–500 characters after trimming |
 | `displayName` | Optional, max 50 characters |
-| `category` | Must be an active category (allowlist) |
+| `category` | Must be a slug from the fixed list (allowlist) |
 | Unknown fields | Rejected |
 
 Escape all user content before rendering. Never render it as raw HTML.
@@ -332,7 +317,6 @@ Hiding a button in the frontend is **not** authorization. For every protected re
                  |                         |
                  |   Source of Truth       |
                  |   Users                 |
-                 |   Categories            |
                  |   Questions             |
                  |   Event State           |
                  +-------------------------+
@@ -413,7 +397,6 @@ QUESTION_DISPLAYED
 QUESTION_REMOVED
 QUESTION_ANSWERED
 QUESTION_REORDERED
-CATEGORIES_UPDATED
 
 SUBMISSIONS_PAUSED
 SUBMISSIONS_RESUMED
@@ -443,7 +426,6 @@ Example: the host disconnects, the moderator approves a question, PostgreSQL sto
 
 ```http
 POST /questions
-GET  /categories
 GET  /event/status
 ```
 
@@ -467,11 +449,6 @@ PATCH  /moderator/questions/:id/remove
 PATCH  /moderator/questions/:id/answer
 PATCH  /moderator/questions/:id/rollback
 PATCH  /moderator/questions/reorder        { "ids": ["…", "…"] }
-
-GET    /moderator/categories               all topics, hidden ones included, with questionCount
-POST   /moderator/categories               { "name": "…" }
-PATCH  /moderator/categories/:id           { "name"?: "…", "isActive"?: true|false }
-DELETE /moderator/categories/:id           204, or 409 if the topic has questions
 
 PATCH  /moderator/event/pause
 PATCH  /moderator/event/resume
@@ -522,23 +499,12 @@ GET /health
 | `created_at` | |
 | `updated_at` | |
 
-### Category
-
-| Column | Notes |
-| --- | --- |
-| `id` | |
-| `name` | |
-| `slug` | unique |
-| `display_order` | |
-| `is_active` | |
-| `created_at` | |
-
 ### Question
 
 | Column | Notes |
 | --- | --- |
 | `id` | |
-| `category_id` | FK → Category |
+| `category` | topic slug from the fixed list (CHECK constraint) |
 | `content` | 1–500 chars |
 | `display_name` | nullable, max 50 chars |
 | `participant_session_id` | anonymous session ID |
@@ -626,7 +592,6 @@ src/
 │   ├── question.views.ts          what each role may see
 │   └── questions.module.ts
 ├── realtime/              Socket.IO gateway, rooms, event names
-├── categories/
 ├── event/                 single-row event state (pause/resume/end)
 ├── users/
 ├── health/
@@ -700,7 +665,7 @@ Only `NEXT_PUBLIC_` variables reach the browser. Never put secrets there.
 
 ## 19. Development Order
 
-1. **Backend foundation** — NestJS, PostgreSQL, Prisma, authentication, question model, categories, event state
+1. **Backend foundation** — NestJS, PostgreSQL, Prisma, authentication, question model, event state
 2. **Participant flow** — category selection, submission, anonymous session, validation, rate limiting
 3. **Moderator flow** — login, pending list, approve/reject, display, answer/remove, pause/resume
 4. **Host flow** — login, receive approved question, approve/reject

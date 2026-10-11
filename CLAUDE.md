@@ -36,7 +36,7 @@ docker compose up -d                      # local Postgres (minetech + minetech_
 cd backend
 npm run start:dev                         # API on :4000 (needs backend/.env, see .env.example)
 npm run db:migrate                        # create/apply a migration after editing schema.prisma
-npm run db:seed                           # categories + SEED_* accounts (idempotent)
+npm run db:seed                           # SEED_* accounts (idempotent)
 npm run user:create -- <name> <MODERATOR|HOST>   # add/reset an account
 npm run lint && npm test && npm run test:e2e     # e2e needs the Docker DB running
 npm run build
@@ -51,7 +51,7 @@ Run the backend e2e suite after any change to questions, auth, event or realtime
 ## Codebase conventions
 
 - **Backend is ESM.** Relative imports need the `.js` extension (`'./questions.service.js'`). Avoid import cycles: decorator metadata breaks under ESM cycles (shared constants live in `src/common/constants.ts`).
-- **Prisma 7**: the client is generated into `backend/src/generated/prisma` (git-ignored, rebuilt by `postinstall`/`build`) and uses the `@prisma/adapter-pg` driver adapter. Run `npx prisma generate` after editing the schema. Constraints Prisma can't express (single `DISPLAYED` row, single-row `event_state`) are raw SQL in the init migration.
+- **Prisma 7**: the client is generated into `backend/src/generated/prisma` (git-ignored, rebuilt by `postinstall`/`build`) and uses the `@prisma/adapter-pg` driver adapter. Run `npx prisma generate` after editing the schema. Constraints Prisma can't express (single `DISPLAYED` row, single-row `event_state`, the fixed topic list) are raw SQL in the migrations.
 - **Next.js 16 differs from older versions.** Read `frontend/AGENTS.md` and the bundled docs in `frontend/node_modules/next/dist/docs/` before using an unfamiliar API. The `react-hooks` lint rules forbid synchronous `setState` inside effects: set state in promise callbacks instead.
 - `socket.io` (backend) and `socket.io-client` (frontend) are pinned to the exact version `@nestjs/platform-socket.io` depends on. Upgrade them together.
 - Socket event names exist twice: `backend/src/realtime/realtime.events.ts` and `frontend/lib/socket/events.ts`. Keep them identical.
@@ -81,7 +81,7 @@ REJECTED        REJECTED
 - "Back where it came from" = `HOST_APPROVED` if `host_approved_at` is set, else `MODERATOR_APPROVED` (host queue). Remove and rollback both use this (`statusBeforeDisplay` in the questions service).
 - Lists are ordered by `position` (then `created_at`). Entering a list sets `position` to the current time (end of list); `PATCH /moderator/questions/reorder` permutes the positions of the given ids only. The host sees the first `MODERATOR_APPROVED` by position. The frontend mirrors this rule for optimistic updates (`applySubsetOrder` in `hooks/useQuestions.ts`).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.
-- Topics (categories) are managed by the moderator (`src/categories/`): rename keeps the slug; a topic with questions can be hidden (`is_active`) but not deleted; at least one topic must stay visible. Changes emit `CATEGORIES_UPDATED` to the moderator room.
+- Topics (categories) are a fixed list, not a table: `backend/src/common/categories.ts` and `frontend/lib/categories.ts` (keep them identical). Questions store the slug in `questions.category`, guarded by a CHECK constraint, so changing the list needs a migration too. There is no topic management UI.
 - At most one question is `DISPLAYED` at a time. Displaying a new question auto-marks the current one `ANSWERED`, in the same transaction.
 - Remove, answer and "clear display" leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question.
 - There is no "End event" action (removed after an accidental use in production); Pause is the way to stop submissions. Don't reintroduce an irreversible event-level action.
@@ -115,6 +115,7 @@ Single event, single backend instance. Do **not** introduce Redis, message queue
 ## Deployment notes
 
 - Backend listens on `process.env.PORT` and `0.0.0.0`, exposes `GET /health`, and shuts down gracefully (`app.enableShutdownHooks()`).
+- Render's free plan sleeps: every page pings `GET /health` once on first load (`components/ui/ServerWakeUp.tsx`, `lib/api/wake.ts`). If a question send hangs or fails because the server is asleep, the participant form shows a floating notice, checks `/health` until it answers, then says they can send again. It never re-sends by itself (no duplicate questions, rule 4).
 - CORS: the exact Vercel origin from `CORS_ORIGIN`, never `*`, with credentials enabled.
 - Frontend reads only `NEXT_PUBLIC_*` variables (API/WS URLs, event name). Never put secrets there.
 - Render build must be `npm ci --include=dev && npm run build` (the Nest CLI is a dev dependency).

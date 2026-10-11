@@ -27,7 +27,8 @@ describe('Security and validation (SPEC §8, §9)', () => {
   describe('question validation', () => {
     it.each([
       ['an unknown category', { category: 'cooking' }],
-      ['an inactive category', { category: 'retired' }],
+      ['a removed category', { category: 'devops-cloud' }],
+      ['a category given by name', { category: 'General' }],
       ['an empty question', { content: '' }],
       ['a whitespace-only question', { content: '   \n  ' }],
       ['a missing question', { content: undefined }],
@@ -76,12 +77,9 @@ describe('Security and validation (SPEC §8, §9)', () => {
 
     it('enforces the per-session 30-minute maximum', async () => {
       const sessionId = '11111111-1111-4111-8111-111111111111';
-      const category = await ctx.prisma.category.findUniqueOrThrow({
-        where: { slug: 'general' },
-      });
       await ctx.prisma.question.createMany({
         data: [1, 2, 3, 4, 5].map((minutesAgo) => ({
-          categoryId: category.id,
+          category: 'general',
           content: `Earlier question ${minutesAgo}`,
           participantSessionId: sessionId,
           source: 'LIVE' as const,
@@ -90,6 +88,19 @@ describe('Security and validation (SPEC §8, §9)', () => {
       });
 
       await submit(ctx, {}, `mt_sid=${sessionId}`).expect(429);
+    });
+
+    it('stores only topics from the fixed list, even when written directly', async () => {
+      await expect(
+        ctx.prisma.question.create({
+          data: {
+            category: 'devops-cloud',
+            content: 'Bypassing the API',
+            participantSessionId: '22222222-2222-4222-8222-222222222222',
+            source: 'LIVE',
+          },
+        }),
+      ).rejects.toThrow();
     });
   });
 

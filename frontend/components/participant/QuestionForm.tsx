@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BlockSwatch } from "@/components/ui/CategoryTag";
 import { ApiError } from "@/lib/api/client";
 import { publicApi } from "@/lib/api/endpoints";
-import type { Category, PublicEventStatus } from "@/lib/api/types";
+import { isServerUp } from "@/lib/api/wake";
+import type { PublicEventStatus } from "@/lib/api/types";
+import { CATEGORIES } from "@/lib/categories";
 import {
   DISPLAY_NAME_MAX,
   type FieldError,
@@ -20,6 +22,12 @@ type LoadState = { status: "loading" } | { status: "error"; message: string } | 
 const PAUSE_RECHECK_MS = 10_000;
 /** After this long still loading, explain that the server may be waking up. */
 const SLOW_LOAD_MS = 4_000;
+/** After a send has been pending this long, say the server may be waking up. */
+const SLOW_SUBMIT_MS = 4_000;
+/** After a send failed because the server is down, check this often whether it is back. */
+const WAKE_RECHECK_MS = 3_000;
+/** How long "The server is ready" stays up. */
+const READY_NOTICE_MS = 10_000;
 /** Start announcing the remaining characters this close to the limit. */
 const COUNTER_ANNOUNCE_WITHIN = 50;
 
@@ -30,8 +38,12 @@ const ERROR_IDS: Record<QuestionField, string> = {
 };
 
 async function loadInitialData() {
-  const [categories, eventStatus] = await Promise.all([publicApi.categories(), publicApi.eventStatus()]);
-  return { categories, eventStatus };
+  return { eventStatus: await publicApi.eventStatus() };
+}
+
+/** No answer, or the host's "not up yet" gateway errors: the server is asleep or starting. */
+function isServerAsleep(e: unknown) {
+  return e instanceof ApiError && [0, 502, 503, 504].includes(e.status);
 }
 
 /** Network failures and 5xx get a plain explanation instead of the server's raw text. */
@@ -42,7 +54,6 @@ function isServerFailure(e: unknown) {
 export function QuestionForm() {
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [slowLoad, setSlowLoad] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [eventStatus, setEventStatus] = useState<PublicEventStatus>({ submissionsOpen: true });
   const [reopened, setReopened] = useState(false);
 
@@ -53,6 +64,9 @@ export function QuestionForm() {
   const [fieldError, setFieldError] = useState<FieldError | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [slowSubmit, setSlowSubmit] = useState(false);
+  /** "waiting": a send failed because the server is down, and we're checking until it's back. */
+  const [wake, setWake] = useState<"idle" | "waiting" | "ready">("idle");
 
   const firstTopicRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -62,7 +76,6 @@ export function QuestionForm() {
   const returningRef = useRef(false);
 
   const applyLoaded = useCallback((result: Awaited<ReturnType<typeof loadInitialData>>) => {
-    setCategories(result.categories);
     setEventStatus(result.eventStatus);
     setLoad({ status: "ready" });
   }, []);
@@ -111,6 +124,39 @@ export function QuestionForm() {
     };
   }, [closed]);
 
+  // A send that hangs is usually the free hosting plan waking up: say so while it waits.
+  useEffect(() => {
+    if (!submitting) return;
+    const timer = setTimeout(() => setSlowSubmit(true), SLOW_SUBMIT_MS);
+    return () => clearTimeout(timer);
+  }, [submitting]);
+
+  // After a send failed because the server was down, check until it answers, then say so.
+  // Nothing is re-sent automatically: the student sends again, so a question is never sent twice.
+  useEffect(() => {
+    if (wake !== "waiting") return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check = () => {
+      isServerUp().then((up) => {
+        if (cancelled) return;
+        if (up) setWake("ready");
+        else timer = setTimeout(check, WAKE_RECHECK_MS);
+      });
+    };
+    check();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [wake]);
+
+  useEffect(() => {
+    if (wake !== "ready") return;
+    const timer = setTimeout(() => setWake("idle"), READY_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [wake]);
+
   // Keep keyboard focus somewhere sensible when the form and the confirmation swap.
   useEffect(() => {
     if (sent) {
@@ -148,6 +194,8 @@ export function QuestionForm() {
     }
 
     setSubmitting(true);
+    setSlowSubmit(false);
+    setWake("idle");
     clearErrors();
     setReopened(false);
     try {
@@ -165,12 +213,16 @@ export function QuestionForm() {
         publicApi.eventStatus().then(setEventStatus).catch(() => undefined);
       }
       if (e instanceof ApiError && e.status === 400 && e.message === "Invalid category") {
-        // The moderator hid or deleted this topic while the form was open:
-        // say so where the topic is picked, and show the current list.
+        // Only if this page is older than the server's topic list (e.g. mid-deploy):
+        // say so where the topic is picked.
         setCategory("");
         setFieldError({ field: "category", message: "That topic is no longer available. Pick another one." });
         focusField("category");
-        publicApi.categories().then(setCategories, () => undefined);
+        return;
+      }
+      if (isServerAsleep(e)) {
+        // The notice at the bottom explains, and tells them when they can send again.
+        setWake("waiting");
         return;
       }
       setServerError(
@@ -178,6 +230,7 @@ export function QuestionForm() {
       );
     } finally {
       setSubmitting(false);
+      setSlowSubmit(false);
     }
   }
 
@@ -250,7 +303,7 @@ export function QuestionForm() {
       <fieldset className={styles.fieldset} aria-describedby={describedBy("category")}>
         <legend className="field-label">1. Pick a topic</legend>
         <div className={styles.categories}>
-          {categories.map((c, index) => (
+          {CATEGORIES.map((c, index) => (
             <label key={c.slug} className={styles.category} data-selected={category === c.slug}>
               <input
                 ref={index === 0 ? firstTopicRef : undefined}
@@ -338,6 +391,20 @@ export function QuestionForm() {
       <button type="submit" className="btn btn-primary btn-lg" disabled={submitting || closed}>
         {submitting ? "Sending…" : "Send question"}
       </button>
+
+      {/* One floating notice about the server; the live region stays mounted so changes are announced. */}
+      <div className={styles.noticeRegion} role="status" aria-live="polite">
+        {submitting && slowSubmit ? (
+          <div className={`alert ${styles.notice}`}>Waking up the server, this can take up to a minute. Hold on…</div>
+        ) : wake === "waiting" ? (
+          <div className={`alert alert-error ${styles.notice}`}>
+            <strong>The server is waking up, so your question was NOT sent.</strong> Your text is kept. We&apos;ll
+            tell you here when you can send it.
+          </div>
+        ) : wake === "ready" ? (
+          <div className={`alert alert-success ${styles.notice}`}>The server is ready. Tap “Send question” again.</div>
+        ) : null}
+      </div>
     </form>
   );
 }

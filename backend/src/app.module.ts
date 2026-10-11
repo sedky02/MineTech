@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module.js';
-import { CategoriesModule } from './categories/categories.module.js';
 import { DEFAULT_IP_LIMIT } from './common/constants.js';
 import { validateEnv } from './config/env.validation.js';
 import { EventModule } from './event/event.module.js';
@@ -23,7 +22,6 @@ import { RealtimeModule } from './realtime/realtime.module.js';
     PrismaModule,
     AuthModule,
     RealtimeModule,
-    CategoriesModule,
     EventModule,
     QuestionsModule,
     HealthModule,

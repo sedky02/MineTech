@@ -38,23 +38,16 @@ export async function createTestApp(): Promise<TestContext> {
 }
 
 /**
- * Empties questions, re-seeds categories and event state, and makes sure both
+ * Empties questions, resets event state, and makes sure both
  * accounts exist. Accounts are kept between tests so auth cookies stay valid
  * (and the login rate limit isn't hit).
  */
 export async function resetDatabase(prisma: PrismaService) {
-  await prisma.$executeRawUnsafe('TRUNCATE questions, categories CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE questions');
   await prisma.eventState.upsert({
     where: { id: 1 },
     create: { id: 1 },
     update: { submissionsOpen: true },
-  });
-  await prisma.category.createMany({
-    data: [
-      { name: 'Web Development', slug: 'web-development', displayOrder: 1 },
-      { name: 'General', slug: 'general', displayOrder: 2 },
-      { name: 'Retired', slug: 'retired', displayOrder: 3, isActive: false },
-    ],
   });
   for (const [account, role] of [
     [MODERATOR, 'MODERATOR'],

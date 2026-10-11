@@ -61,7 +61,7 @@ cd backend
 cp .env.example .env        # then set JWT_SECRET and the SEED_* passwords
 npm install
 npx prisma migrate deploy
-npm run db:seed             # categories + moderator/host accounts from SEED_*
+npm run db:seed             # moderator/host accounts from SEED_*
 npm run start:dev
 
 # 3. Frontend → http://localhost:3000 (in another terminal)
