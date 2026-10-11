@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Pixelify_Sans, Press_Start_2P } from "next/font/google";
+import { Press_Start_2P, Sarpanch } from "next/font/google";
 import { MinecraftSky } from "@/components/ui/MinecraftSky";
 import { ServerWakeUp } from "@/components/ui/ServerWakeUp";
 import { EVENT_NAME } from "@/lib/config";
@@ -11,9 +11,10 @@ const pressStart = Press_Start_2P({
   variable: "--font-press-start",
 });
 
-const pixelify = Pixelify_Sans({
-  subsets: ["latin"],
-  variable: "--font-pixelify",
+const sarpanch = Sarpanch({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-sarpanch",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${pressStart.variable} ${pixelify.variable}`}>
+    <html lang="en" className={`${pressStart.variable} ${sarpanch.variable}`}>
       <body>
         <ServerWakeUp />
         <MinecraftSky />
