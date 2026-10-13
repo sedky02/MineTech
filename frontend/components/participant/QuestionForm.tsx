@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BlockSwatch } from "@/components/ui/CategoryTag";
 import { ApiError } from "@/lib/api/client";
 import { publicApi } from "@/lib/api/endpoints";
@@ -18,12 +18,8 @@ import {
 import { useBoot } from "./ParticipantShell";
 import styles from "./participant.module.css";
 
-type LoadState = { status: "loading" } | { status: "error"; message: string } | { status: "ready" };
-
 /** While questions are paused, check this often whether the moderator reopened them. */
 const PAUSE_RECHECK_MS = 10_000;
-/** After this long still loading, explain that the server may be waking up. */
-const SLOW_LOAD_MS = 4_000;
 /** After a send has been pending this long, say the server may be waking up. */
 const SLOW_SUBMIT_MS = 4_000;
 /** After a send failed because the server is down, check this often whether it is back. */
@@ -39,12 +35,6 @@ const ERROR_IDS: Record<QuestionField, string> = {
   displayName: "name-error",
 };
 
-async function loadInitialData() {
-  const eventStatus = await publicApi.eventStatus();
-  writeCachedEventStatus(eventStatus);
-  return { eventStatus };
-}
-
 /** No answer, or the host's "not up yet" gateway errors: the server is asleep or starting. */
 function isServerAsleep(e: unknown) {
   return e instanceof ApiError && [0, 502, 503, 504].includes(e.status);
@@ -57,8 +47,6 @@ function isServerFailure(e: unknown) {
 
 export function QuestionForm() {
   const boot = useBoot();
-  const [load, setLoad] = useState<LoadState>({ status: "loading" });
-  const [slowLoad, setSlowLoad] = useState(false);
   const [eventStatus, setEventStatus] = useState<PublicEventStatus>({ submissionsOpen: true });
   const [reopened, setReopened] = useState(false);
 
@@ -79,55 +67,33 @@ export function QuestionForm() {
   const askAgainRef = useRef<HTMLButtonElement>(null);
   /** Set by "Ask another question", so focus only jumps to the field then, never on first load. */
   const returningRef = useRef(false);
-  /** The form was shown from the cached status; the server's answer is still on its way. */
-  const servedFromCache = useRef(false);
-
-  const applyLoaded = useCallback((result: Awaited<ReturnType<typeof loadInitialData>>) => {
-    setEventStatus(result.eventStatus);
-    setLoad({ status: "ready" });
-  }, []);
-
-  const applyLoadError = useCallback((e: unknown) => {
-    // Already showing the form from the cache: a failed refresh isn't worth an error screen;
-    // sending a question reports a server problem on its own.
-    if (servedFromCache.current) return;
-    setLoad({
-      status: "error",
-      message: isServerFailure(e)
-        ? "Couldn't load the form. Check your connection and try again."
-        : e instanceof Error
-          ? e.message
-          : "Couldn't load the form.",
-    });
-  }, []);
-
   useEffect(() => {
-    // A returning student gets the form at once from the last known status; the server's
-    // answer replaces it a moment later. Applied in a promise callback, never synchronously.
+    // The form shows at once, open by default (or from the last status this browser saw);
+    // the server's answer, which may be slow while it wakes, replaces that whenever it arrives.
+    // A failed refresh is ignored: sending a question reports a server problem on its own.
+    // State is set in promise callbacks, never synchronously.
     const cached = readCachedEventStatus();
-    if (cached) {
-      servedFromCache.current = true;
-      void Promise.resolve({ eventStatus: cached }).then(applyLoaded);
-    }
-    loadInitialData().then(applyLoaded, applyLoadError);
-  }, [applyLoaded, applyLoadError]);
+    if (cached) void Promise.resolve(cached).then(setEventStatus);
+    let active = true;
+    publicApi.eventStatus().then(
+      (status) => {
+        writeCachedEventStatus(status);
+        if (active) setEventStatus(status);
+      },
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  // The form's first look is the logo splash (see ParticipantShell): tell it when we're ready.
+  // The form is usable immediately, so the logo splash can finish right away.
   const { ready: bootReady } = boot;
-  useEffect(() => {
-    if (load.status !== "loading") bootReady({ instant: servedFromCache.current });
-  }, [load.status, bootReady]);
-
-  // The free hosting plan can take up to a minute to wake: say so instead of a bare "Loading…".
-  useEffect(() => {
-    if (load.status !== "loading") return;
-    const timer = setTimeout(() => setSlowLoad(true), SLOW_LOAD_MS);
-    return () => clearTimeout(timer);
-  }, [load.status]);
+  useEffect(() => bootReady({ instant: true }), [bootReady]);
 
   // While paused the submit button is disabled, so the student can't trigger a recheck:
   // poll, and recheck when they come back to the tab.
-  const closed = load.status === "ready" && !eventStatus.submissionsOpen;
+  const closed = !eventStatus.submissionsOpen;
   useEffect(() => {
     if (!closed) return;
     const recheck = () => {
@@ -190,12 +156,6 @@ export function QuestionForm() {
       contentRef.current?.focus();
     }
   }, [sent]);
-
-  const retryLoad = () => {
-    setLoad({ status: "loading" });
-    setSlowLoad(false);
-    loadInitialData().then(applyLoaded, applyLoadError);
-  };
 
   function clearErrors() {
     setFieldError(null);
@@ -262,28 +222,6 @@ export function QuestionForm() {
       setSubmitting(false);
       setSlowSubmit(false);
     }
-  }
-
-  if (load.status === "loading") {
-    // First launch: the centred logo is the loading screen. Only a retry shows this.
-    if (boot.phase !== "done") return null;
-    return (
-      <div className={styles.loading} role="status">
-        <p className="muted">Loading…</p>
-        {slowLoad && <p className="field-hint">Waking up the server, this can take up to a minute.</p>}
-      </div>
-    );
-  }
-
-  if (load.status === "error") {
-    return (
-      <div className={`alert alert-error ${styles.stack}`} role="alert">
-        <p>{load.message}</p>
-        <button className="btn btn-sm" onClick={retryLoad}>
-          Try again
-        </button>
-      </div>
-    );
   }
 
   if (sent) {
