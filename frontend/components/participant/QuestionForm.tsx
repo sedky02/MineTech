@@ -50,7 +50,7 @@ export function QuestionForm() {
   const [eventStatus, setEventStatus] = useState<PublicEventStatus>({ submissionsOpen: true });
   const [reopened, setReopened] = useState(false);
 
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("general");
   const [content, setContent] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
