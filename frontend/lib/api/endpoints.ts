@@ -28,7 +28,8 @@ export const authApi = {
   me: () => apiFetch<{ user: AuthUser }>("/auth/me"),
 };
 
-export type ModeratorAction = "approve" | "reject" | "display" | "remove" | "answer" | "rollback";
+/** Each maps to `PATCH /moderator/questions/:id/<action>`. */
+export type ModeratorAction = "approve" | "reject" | "display" | "remove" | "answer" | "rollback" | "review";
 
 export const moderatorApi = {
   dashboard: () => apiFetch<ModeratorDashboard>("/moderator/questions"),

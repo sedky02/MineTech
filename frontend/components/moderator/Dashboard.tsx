@@ -30,11 +30,12 @@ const SUCCESS_MESSAGES: Record<ModeratorAction, string> = {
   display: "On screen now",
   remove: "Removed from screen",
   answer: "Marked as answered",
-  rollback: "Previous question is back on screen",
+  rollback: "Back on screen",
+  review: "Back in To review",
 };
 
 /** Actions after which the card leaves its list, so focus moves to its neighbour. */
-const LEAVES_LIST: ModeratorAction[] = ["approve", "reject", "display"];
+const LEAVES_LIST: ModeratorAction[] = ["approve", "reject", "display", "rollback", "review"];
 
 function describeError(error: unknown) {
   if (error instanceof ApiError && error.status === 409) {
@@ -149,7 +150,7 @@ export function Dashboard() {
   }
   if (!dashboard) return <LoadingScreen label={error ?? "Loading questions…"} />;
 
-  const { pending, awaitingHost, ready, displayed, previous } = dashboard;
+  const { pending, awaitingHost, ready, displayed, previous, answered, rejected } = dashboard;
   const queued = [...pending, ...awaitingHost, ...ready];
   const counts: Record<string, number> = {};
   for (const q of queued) counts[q.category.slug] = (counts[q.category.slug] ?? 0) + 1;
@@ -214,13 +215,6 @@ export function Dashboard() {
                   disabled={isBusy(displayed.id)}
                 >
                   Mark answered
-                </button>
-                <button
-                  className="btn btn-quiet"
-                  onClick={() => act(displayed.id, "remove")}
-                  disabled={isBusy(displayed.id)}
-                >
-                  Remove from screen
                 </button>
               </div>
             </>
@@ -289,10 +283,25 @@ export function Dashboard() {
                 controls={controls}
                 isNew={isNew(q)}
                 busy={isBusy(q.id)}
-                shortcuts={{ keys: { a: () => act(q.id, "approve"), r: () => act(q.id, "reject") }, ...moves }}
+                shortcuts={{
+                  keys: {
+                    a: () => act(q.id, "approve"),
+                    r: () => act(q.id, "reject"),
+                    s: () => act(q.id, "display"),
+                  },
+                  ...moves,
+                }}
               >
                 <button className="btn btn-sm btn-primary" onClick={() => act(q.id, "approve")} disabled={isBusy(q.id)}>
                   Send to host
+                </button>
+                <button
+                  className="btn btn-sm btn-lapis"
+                  onClick={() => act(q.id, "display")}
+                  disabled={isBusy(q.id)}
+                  title="Skips the host. Removed later, it goes to the host's queue."
+                >
+                  Show now
                 </button>
                 <button
                   className="btn btn-sm btn-quiet-danger"
@@ -375,9 +384,122 @@ export function Dashboard() {
         </Column>
       </section>
 
+      <section className={styles.history}>
+        <HistoryPanel
+          id="answered"
+          title="Answered"
+          hint="Already shown, most recent first"
+          count={answered.length}
+          empty="Questions marked answered appear here."
+        >
+          {answered.map((q) => (
+            <QuestionCard
+              key={q.id}
+              question={q}
+              column="answered"
+              busy={isBusy(q.id)}
+              note={`Answered at ${formatTime(q.answeredAt)}`}
+            >
+              <button
+                className="btn btn-sm btn-lapis"
+                onClick={() => act(q.id, "rollback")}
+                disabled={isBusy(q.id)}
+                title={displayed ? "The question on screen goes back to its list" : undefined}
+              >
+                Show again
+              </button>
+              <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
+                Return to review
+              </button>
+            </QuestionCard>
+          ))}
+        </HistoryPanel>
+
+        <HistoryPanel
+          id="rejected"
+          title="Rejected"
+          hint="Never shown to the host or the screen"
+          count={rejected.length}
+          empty="Rejected questions appear here, so you can undo a rejection."
+        >
+          {rejected.map((q) => (
+            <QuestionCard
+              key={q.id}
+              question={q}
+              column="rejected"
+              busy={isBusy(q.id)}
+              note={
+                q.hostRejectedAt
+                  ? `Rejected by the host at ${formatTime(q.hostRejectedAt)}`
+                  : `Rejected at ${formatTime(q.moderatorRejectedAt)}`
+              }
+            >
+              <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
+                Return to review
+              </button>
+            </QuestionCard>
+          ))}
+        </HistoryPanel>
+      </section>
 
       <ToastRegion toasts={toasts} onDismiss={dismiss} />
     </div>
+  );
+}
+
+/** Whether a history list is expanded, remembered per browser (a convenience: it may be unavailable). */
+function readExpanded(id: string) {
+  try {
+    return window.localStorage.getItem(`mt:moderator:${id}-open`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeExpanded(id: string, open: boolean) {
+  try {
+    window.localStorage.setItem(`mt:moderator:${id}-open`, open ? "1" : "0");
+  } catch {
+    // Private mode or blocked storage: the list just starts collapsed next time.
+  }
+}
+
+/** A collapsible list (Answered, Rejected); collapsed by default so the working lists stay in view. */
+function HistoryPanel({
+  id,
+  title,
+  hint,
+  count,
+  empty,
+  children,
+}: {
+  id: string;
+  title: string;
+  hint: string;
+  count: number;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(() => typeof window !== "undefined" && readExpanded(id));
+  return (
+    <details
+      className={`panel ${styles.column} ${styles.historyPanel}`}
+      open={open}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        setOpen(next);
+        writeExpanded(id, next);
+      }}
+    >
+      <summary className={styles.columnHeader}>
+        <h2 className="panel-title">
+          <span className={styles.chevron} aria-hidden /> {title}
+        </h2>
+        <span className={styles.count}>{count}</span>
+        <p className={styles.columnHint}>{hint}</p>
+      </summary>
+      <div className={styles.list}>{count === 0 ? <p className="muted">{empty}</p> : children}</div>
+    </details>
   );
 }
 

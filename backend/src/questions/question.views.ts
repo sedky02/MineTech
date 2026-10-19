@@ -17,6 +17,7 @@ export function toModeratorView(q: Question) {
     hostRejectedAt: q.hostRejectedAt,
     displayedAt: q.displayedAt,
     answeredAt: q.answeredAt,
+    returnedToReviewAt: q.returnedToReviewAt,
   };
 }
 

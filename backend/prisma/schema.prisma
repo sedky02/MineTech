@@ -64,6 +64,8 @@ model Question {
 
   displayedAt DateTime? @map("displayed_at")
   answeredAt  DateTime? @map("answered_at")
+  /// Last time a rejected or answered question was sent back to review.
+  returnedToReviewAt DateTime? @map("returned_to_review_at")
 
   updatedAt DateTime @updatedAt @map("updated_at")
 

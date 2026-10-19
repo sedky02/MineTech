@@ -354,9 +354,68 @@
   color: var(--text);
 }
 
+/* Answered and rejected questions, below the working lists. */
+.history {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.history .list {
+  max-height: 420px;
+}
+
+.historyPanel {
+  min-height: 0;
+}
+
+.historyPanel > summary {
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0;
+}
+
+.historyPanel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.historyPanel > summary:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 4px;
+}
+
+.historyPanel[open] > summary {
+  margin-bottom: 14px;
+}
+
+/* A pixel triangle that points right when collapsed and down when open. */
+.chevron {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 6px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 9px solid currentColor;
+  vertical-align: middle;
+  transition: transform 150ms ease;
+}
+
+.historyPanel[open] .chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
 @media (max-width: 1100px) {
   .stage,
-  .columns {
+  .columns,
+  .history {
     grid-template-columns: 1fr;
   }
 

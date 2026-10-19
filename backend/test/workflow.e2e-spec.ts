@@ -219,7 +219,7 @@ describe('Question workflow (SPEC §4, §20)', () => {
 
   it('rejects transitions from the wrong state', async () => {
     const id = await createQuestion();
-    await mod('patch', `/moderator/questions/${id}/display`).expect(409);
+    await mod('patch', `/moderator/questions/${id}/answer`).expect(409);
     await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
     await mod('patch', `/moderator/questions/${id}/approve`).expect(409);
     await mod('patch', `/moderator/questions/${id}/answer`).expect(409);
@@ -272,6 +272,41 @@ describe('Question workflow (SPEC §4, §20)', () => {
       expect((await host('get', '/host/question')).body.question.id).toBe(id);
     });
 
+    it('lets the moderator display a question straight from "To review"', async () => {
+      const id = await createQuestion('Straight to the screen?');
+      const r = await rooms();
+
+      const res = await mod(
+        'patch',
+        `/moderator/questions/${id}/display`,
+      ).expect(200);
+      expect(res.body).toMatchObject({ status: 'DISPLAYED', hostApprovedAt: null });
+      // Showing it counts as the moderator's approval.
+      expect(res.body.moderatorApprovedAt).not.toBeNull();
+      expect(await r.presentation.waitFor('QUESTION_DISPLAYED')).toMatchObject({
+        id,
+      });
+      await settle();
+      // The host never had it, so the host hears nothing.
+      expect(r.host.names()).toEqual([]);
+
+      // Removed, it goes to the host's queue like any question that skipped the host.
+      const removed = await mod(
+        'patch',
+        `/moderator/questions/${id}/remove`,
+      ).expect(200);
+      expect(removed.body.status).toBe('MODERATOR_APPROVED');
+    });
+
+    it('never displays a rejected question', async () => {
+      const id = await createQuestion();
+      await mod('patch', `/moderator/questions/${id}/reject`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/display`).expect(409);
+      expect(
+        (await ctx.http().get('/presentation/current')).body.question,
+      ).toBeNull();
+    });
+
     it('still never displays a question the host rejected', async () => {
       const id = await createQuestion();
       await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
@@ -320,7 +355,6 @@ describe('Question workflow (SPEC §4, §20)', () => {
         await mod('patch', `/moderator/questions/${id}/answer`).expect(200);
       }
 
-      await mod('patch', `/moderator/questions/${a}/rollback`).expect(409);
       await mod('patch', `/moderator/questions/${b}/rollback`).expect(200);
       expect((await mod('get', '/moderator/questions')).body.previous.id).toBe(
         a,
@@ -331,11 +365,117 @@ describe('Question workflow (SPEC §4, §20)', () => {
       ).toBe(a);
     });
 
+    it('can bring back any answered question, not only the previous one', async () => {
+      const a = await toHostApproved('Older answered question?');
+      const b = await toHostApproved('Newer answered question?');
+      for (const id of [a, b]) {
+        await mod('patch', `/moderator/questions/${id}/display`).expect(200);
+        await mod('patch', `/moderator/questions/${id}/answer`).expect(200);
+      }
+
+      await mod('patch', `/moderator/questions/${a}/rollback`).expect(200);
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.displayed.id).toBe(a);
+      expect(body.answered.map((q: any) => q.id)).toEqual([b]);
+      expect(body.previous.id).toBe(b);
+    });
+
     it('rejects unknown questions', async () => {
       await mod(
         'patch',
         '/moderator/questions/00000000-0000-4000-8000-000000000000/rollback',
       ).expect(404);
+    });
+  });
+
+  describe('returning a question to review', () => {
+    it('sends a rejected question back to "To review", to moderators only', async () => {
+      const byModerator = await createQuestion('Rejected by the moderator?');
+      await mod('patch', `/moderator/questions/${byModerator}/reject`).expect(
+        200,
+      );
+      const byHost = await createQuestion('Rejected by the host?');
+      await mod('patch', `/moderator/questions/${byHost}/approve`).expect(200);
+      await host('patch', `/host/questions/${byHost}/reject`).expect(200);
+
+      const before = (await mod('get', '/moderator/questions')).body;
+      expect(before.rejected.map((q: any) => q.id)).toEqual([
+        byHost,
+        byModerator,
+      ]);
+
+      const r = await rooms();
+      for (const id of [byModerator, byHost]) {
+        const res = await mod(
+          'patch',
+          `/moderator/questions/${id}/review`,
+        ).expect(200);
+        expect(res.body).toMatchObject({
+          status: 'PENDING',
+          moderatorApprovedAt: null,
+          moderatorRejectedAt: null,
+          hostRejectedAt: null,
+        });
+        expect(res.body.returnedToReviewAt).not.toBeNull();
+      }
+      await r.moderator.waitFor('QUESTION_RETURNED_TO_REVIEW');
+      await settle();
+      expect(r.host.names()).toEqual([]);
+      expect(r.presentation.names()).toEqual([]);
+
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.pending.map((q: any) => q.id)).toEqual([byModerator, byHost]);
+      expect(body.rejected).toEqual([]);
+      expect(body.stats.rejected).toBe(0);
+    });
+
+    it('sends an answered question back through the whole workflow', async () => {
+      const id = await toHostApproved('Answered, then back to review?');
+      await mod('patch', `/moderator/questions/${id}/display`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/answer`).expect(200);
+
+      const res = await mod('patch', `/moderator/questions/${id}/review`).expect(
+        200,
+      );
+      expect(res.body).toMatchObject({
+        status: 'PENDING',
+        hostApprovedAt: null,
+        displayedAt: null,
+        answeredAt: null,
+      });
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.answered).toEqual([]);
+      expect(body.previous).toBeNull();
+
+      // Its old host approval is gone: shown again without the host, a
+      // removal returns it to the host's queue.
+      await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/display`).expect(200);
+      const removed = await mod(
+        'patch',
+        `/moderator/questions/${id}/remove`,
+      ).expect(200);
+      expect(removed.body.status).toBe('MODERATOR_APPROVED');
+    });
+
+    it('only accepts rejected or answered questions', async () => {
+      const id = await createQuestion();
+      await mod('patch', `/moderator/questions/${id}/review`).expect(409);
+      await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/review`).expect(409);
+      await mod('patch', `/moderator/questions/${id}/display`).expect(200);
+      await mod('patch', `/moderator/questions/${id}/review`).expect(409);
+      await mod(
+        'patch',
+        '/moderator/questions/00000000-0000-4000-8000-000000000000/review',
+      ).expect(404);
+    });
+
+    it('is moderator-only', async () => {
+      const id = await createQuestion();
+      await mod('patch', `/moderator/questions/${id}/reject`).expect(200);
+      await host('patch', `/moderator/questions/${id}/review`).expect(403);
+      await ctx.http().patch(`/moderator/questions/${id}/review`).expect(401);
     });
   });
 

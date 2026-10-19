@@ -29,6 +29,13 @@ const REORDERABLE: QuestionStatus[] = [
   QuestionStatus.HOST_APPROVED,
 ];
 
+/** Statuses the moderator can put on screen with `display` (SPEC §4). */
+const DISPLAYABLE: QuestionStatus[] = [
+  QuestionStatus.HOST_APPROVED,
+  QuestionStatus.MODERATOR_APPROVED,
+  QuestionStatus.PENDING,
+];
+
 const listOrder: Prisma.QuestionOrderByWithRelationInput[] = [
   { position: 'asc' },
   { createdAt: 'asc' },
@@ -184,11 +191,20 @@ export class QuestionsService {
   /**
    * Puts a question on screen; whatever was displayed is marked answered.
    * Normally the question is HOST_APPROVED, but the moderator may also skip
-   * the host and display a question still waiting for host review.
+   * the host (MODERATOR_APPROVED), or skip review and the host altogether
+   * (PENDING: showing it counts as the moderator's approval).
    */
   async display(id: string) {
     const now = new Date();
+    let from: QuestionStatus | undefined;
     const change = await this.changeDisplay(async (tx) => {
+      const target = await tx.question.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      if (!target) throw new NotFoundException('Question not found');
+      from = target.status;
+
       const displayed = await tx.question.findFirst({
         where: { status: QuestionStatus.DISPLAYED },
         select: { id: true },
@@ -200,17 +216,23 @@ export class QuestionsService {
               answeredAt: now,
             })
           : null;
+      // Conditional on the status just read, so a concurrent change still
+      // fails with 409 instead of applying twice.
       const current = await this.transition(
         tx,
         id,
-        [QuestionStatus.HOST_APPROVED, QuestionStatus.MODERATOR_APPROVED],
-        { status: QuestionStatus.DISPLAYED, displayedAt: now },
+        DISPLAYABLE.includes(from) ? from : DISPLAYABLE,
+        {
+          status: QuestionStatus.DISPLAYED,
+          displayedAt: now,
+          ...(from === QuestionStatus.PENDING && { moderatorApprovedAt: now }),
+        },
       );
       return { answered, removed: null, current };
     });
 
     this.emitDisplayChange(change);
-    if (change.current.hostApprovedAt === null) {
+    if (from === QuestionStatus.MODERATOR_APPROVED) {
       // Taken from the host's queue: the host view must move on.
       this.realtime.emit(Room.HOST, SocketEvent.QUESTION_DISPLAYED, { id });
     }
@@ -218,23 +240,21 @@ export class QuestionsService {
   }
 
   /**
-   * Shows the previous (most recently answered) question again. Whatever is
+   * Shows an answered question again (usually the previous one). Whatever is
    * on screen was interrupted rather than answered, so it goes back to where
    * it came from. Rolling back repeatedly walks back through the history.
    */
   async rollback(id: string) {
     const now = new Date();
     const change = await this.changeDisplay(async (tx) => {
-      const latest = await tx.question.findFirst({
-        where: { status: QuestionStatus.ANSWERED },
-        orderBy: { answeredAt: 'desc' },
-        select: { id: true },
+      const target = await tx.question.findUnique({
+        where: { id },
+        select: { status: true },
       });
-      if (latest?.id !== id) {
-        const exists = await tx.question.findUnique({ where: { id } });
-        if (!exists) throw new NotFoundException('Question not found');
+      if (!target) throw new NotFoundException('Question not found');
+      if (target.status !== QuestionStatus.ANSWERED) {
         throw new ConflictException(
-          'Only the previous question can be rolled back',
+          `Question is ${target.status}, expected ANSWERED`,
         );
       }
 
@@ -291,6 +311,39 @@ export class QuestionsService {
     return toModeratorView(question);
   }
 
+  /**
+   * Sends a rejected or answered question back to "To review", as if it had
+   * just arrived: the workflow timestamps are cleared so it goes through the
+   * moderator and host again, and it lands at the end of the list. Neither
+   * state is visible to the host or the presentation, so only moderators hear
+   * about it.
+   */
+  async returnToReview(id: string) {
+    const now = new Date();
+    const question = await this.transition(
+      this.prisma,
+      id,
+      [QuestionStatus.REJECTED, QuestionStatus.ANSWERED],
+      {
+        status: QuestionStatus.PENDING,
+        returnedToReviewAt: now,
+        position: now.getTime(),
+        moderatorApprovedAt: null,
+        moderatorRejectedAt: null,
+        hostApprovedAt: null,
+        hostRejectedAt: null,
+        displayedAt: null,
+        answeredAt: null,
+      },
+    );
+    this.realtime.emit(
+      Room.MODERATOR,
+      SocketEvent.QUESTION_RETURNED_TO_REVIEW,
+      toModeratorView(question),
+    );
+    return toModeratorView(question);
+  }
+
   async moderatorDashboard() {
     const byStatus = (status: QuestionStatus) =>
       this.prisma.question.findMany({
@@ -298,7 +351,7 @@ export class QuestionsService {
         orderBy: listOrder,
       });
 
-    const [pending, awaitingHost, ready, displayed, previous, finished] =
+    const [pending, awaitingHost, ready, displayed, answered, rejected] =
       await Promise.all([
         byStatus(QuestionStatus.PENDING),
         byStatus(QuestionStatus.MODERATOR_APPROVED),
@@ -306,30 +359,28 @@ export class QuestionsService {
         this.prisma.question.findFirst({
           where: { status: QuestionStatus.DISPLAYED },
         }),
-        this.prisma.question.findFirst({
+        // History lists, most recent first.
+        this.prisma.question.findMany({
           where: { status: QuestionStatus.ANSWERED },
           orderBy: { answeredAt: 'desc' },
         }),
-        this.prisma.question.groupBy({
-          by: ['status'],
-          where: {
-            status: { in: [QuestionStatus.ANSWERED, QuestionStatus.REJECTED] },
-          },
-          _count: { _all: true },
+        this.prisma.question.findMany({
+          where: { status: QuestionStatus.REJECTED },
+          orderBy: { updatedAt: 'desc' },
         }),
       ]);
-    const countOf = (status: QuestionStatus) =>
-      finished.find((row) => row.status === status)?._count._all ?? 0;
 
     return {
       pending: pending.map(toModeratorView),
       awaitingHost: awaitingHost.map(toModeratorView),
       ready: ready.map(toModeratorView),
       displayed: displayed ? toModeratorView(displayed) : null,
-      previous: previous ? toModeratorView(previous) : null,
+      previous: answered[0] ? toModeratorView(answered[0]) : null,
+      answered: answered.map(toModeratorView),
+      rejected: rejected.map(toModeratorView),
       stats: {
-        answered: countOf(QuestionStatus.ANSWERED),
-        rejected: countOf(QuestionStatus.REJECTED),
+        answered: answered.length,
+        rejected: rejected.length,
       },
     };
   }

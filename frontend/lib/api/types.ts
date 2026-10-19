@@ -31,6 +31,7 @@ export interface ModeratorQuestion extends PublicQuestion {
   hostRejectedAt: string | null;
   displayedAt: string | null;
   answeredAt: string | null;
+  returnedToReviewAt: string | null;
 }
 
 export interface ModeratorDashboard {
@@ -39,6 +40,10 @@ export interface ModeratorDashboard {
   ready: ModeratorQuestion[];
   displayed: ModeratorQuestion | null;
   previous: ModeratorQuestion | null;
+  /** Most recently answered first. */
+  answered: ModeratorQuestion[];
+  /** Most recently rejected first. */
+  rejected: ModeratorQuestion[];
   stats: { answered: number; rejected: number };
 }
 

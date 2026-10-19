@@ -75,9 +75,11 @@ PENDING → MODERATOR_APPROVED → HOST_APPROVED → DISPLAYED ⇄ ANSWERED
    ↓               ↓    └──── skip host ───────────┘  (rollback)
 REJECTED        REJECTED
 (moderator)     (host)
+
+REJECTED | ANSWERED → PENDING   (moderator: "Return to review")
 ```
 
-- Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `MODERATOR_APPROVED → DISPLAYED` (skip the host), `DISPLAYED → ANSWERED`, `DISPLAYED → back where it came from` (remove), `latest ANSWERED → DISPLAYED` (rollback).
+- Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `MODERATOR_APPROVED → DISPLAYED` (skip the host), `PENDING → DISPLAYED` ("Show now" from To review: sets `moderator_approved_at`, skips the host, host not notified), `DISPLAYED → ANSWERED`, `DISPLAYED → back where it came from` (remove), `any ANSWERED → DISPLAYED` (rollback / "Show again"), `REJECTED | ANSWERED → PENDING` (return to review: clears the workflow timestamps, sets `returned_to_review_at`, moderator room only).
 - "Back where it came from" = `HOST_APPROVED` if `host_approved_at` is set, else `MODERATOR_APPROVED` (host queue). Remove and rollback both use this (`statusBeforeDisplay` in the questions service).
 - Lists are ordered by `position` (then `created_at`). Entering a list sets `position` to the current time (end of list); `PATCH /moderator/questions/reorder` permutes the positions of the given ids only. The host sees the first `MODERATOR_APPROVED` by position. The frontend mirrors this rule for optimistic updates (`applySubsetOrder` in `hooks/useQuestions.ts`).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.
@@ -85,7 +87,7 @@ REJECTED        REJECTED
 - At most one question is `DISPLAYED` at a time. Displaying a new question auto-marks the current one `ANSWERED`, in the same transaction.
 - Remove, answer and "clear display" leave the presentation on the **idle screen** (event logo + event name). Clear display is just remove on the current question.
 - There is no "End event" action (removed after an accidental use in production); Pause is the way to stop submissions. Don't reintroduce an irreversible event-level action.
-- The moderator dashboard shows the **previous question** (most recently answered).
+- The moderator dashboard shows the **previous question** (most recently answered), plus the full **Answered** and **Rejected** lists below the working columns.
 - `source` (`PRE_EVENT`/`LIVE`) is informational only, derived from `EVENT_STARTS_AT`.
 - Set the matching timestamp column (`moderator_approved_at`, `host_rejected_at`, …) on every transition.
 - Auth: JWT in an HTTP-only cookie (`mt_auth`), Bearer header accepted as a fallback, all in `src/common/guards/auth.guard.ts`. The transport is still an open question (third-party cookie blocking): keep it isolated in the guard and the socket middleware.

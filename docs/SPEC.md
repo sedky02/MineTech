@@ -89,8 +89,10 @@ Participant submits
                        ↓            │
                   DISPLAYED ◄───────┘
                        ↓      ▲
-                  ANSWERED ───┘ Roll back (previous question only)
+                  ANSWERED ───┘ Roll back (any answered question)
 ```
+
+The moderator can also send a `REJECTED` or `ANSWERED` question back to `PENDING` ("Return to review").
 
 ### States
 
@@ -115,22 +117,26 @@ The backend enforces these. Any other transition is rejected.
 | `MODERATOR_APPROVED` | `REJECTED` | Host | `PATCH /host/questions/:id/reject` |
 | `HOST_APPROVED` | `DISPLAYED` | Moderator | `PATCH /moderator/questions/:id/display` |
 | `MODERATOR_APPROVED` | `DISPLAYED` | Moderator (skips the host) | `PATCH /moderator/questions/:id/display` |
+| `PENDING` | `DISPLAYED` | Moderator (skips review and the host; sets `moderator_approved_at`) | `PATCH /moderator/questions/:id/display` |
 | `DISPLAYED` | `ANSWERED` | Moderator | `PATCH /moderator/questions/:id/answer` |
 | `DISPLAYED` | `HOST_APPROVED`, or `MODERATOR_APPROVED` if it skipped the host | Moderator | `PATCH /moderator/questions/:id/remove` |
-| `ANSWERED` (most recent only) | `DISPLAYED` | Moderator | `PATCH /moderator/questions/:id/rollback` |
+| `ANSWERED` | `DISPLAYED` | Moderator | `PATCH /moderator/questions/:id/rollback` |
+| `REJECTED` or `ANSWERED` | `PENDING` | Moderator | `PATCH /moderator/questions/:id/review` |
 
 ### Display rules
 
 - **Display while another question is displayed:** the current question is marked `ANSWERED` automatically, and the new one becomes `DISPLAYED`. Both changes happen in a single database transaction.
+- **Show straight from review:** the moderator can display a question straight from "To review". Showing it counts as the moderator's approval (`moderator_approved_at` is set) and skips the host, so if it is removed it goes to the host's queue. The host is not notified: it never had the question.
 - **Skip the host:** when the host has no time to review, the moderator can display a question straight from "Waiting for host". The host's view moves on to the next question immediately. `host_approved_at` stays empty, so skipped questions remain identifiable.
 - **Remove:** the question goes back to where it came from (`HOST_APPROVED`, or the host's queue if it skipped the host), so it can be displayed again later, and the presentation switches to the idle screen (event logo + event name).
 - **Answer:** the question becomes `ANSWERED`, and the presentation switches to the idle screen.
-- **Roll back:** re-displays the previous question (the most recently answered one) and clears its `answered_at`. The question on screen, if any, was interrupted rather than answered, so it goes back to where it came from, as with Remove. Rolling back again walks further back through the history. Only the most recent answered question can be rolled back (`409` otherwise).
+- **Roll back / Show again:** re-displays an answered question (usually the previous one) and clears its `answered_at`. The question on screen, if any, was interrupted rather than answered, so it goes back to where it came from, as with Remove. Rolling back again walks further back through the history.
+- **Return to review:** a rejected or answered question goes back to the end of "To review" as if it had just arrived. Its workflow timestamps (`moderator_*`, `host_*`, `displayed_at`, `answered_at`) are cleared so it goes through the moderator and the host again, and `returned_to_review_at` is set. Only the moderator room is notified (`QUESTION_RETURNED_TO_REVIEW`): neither state was ever visible to the host or the presentation.
 
 ### Guarantees
 
 - A moderator rejection never reaches the host.
-- A host rejection never reaches the presentation (only `MODERATOR_APPROVED` or `HOST_APPROVED` questions can be displayed, never `REJECTED` ones).
+- A host rejection never reaches the presentation (only `PENDING`, `MODERATOR_APPROVED` or `HOST_APPROVED` questions can be displayed, never `REJECTED` ones).
 - At most one question is `DISPLAYED` at any time.
 
 ---
@@ -146,16 +152,19 @@ The moderator is the actual operator of the system.
 - Category filter (chips with counts) above the three lists
 - Currently displayed question
 - Previous question: the most recently answered question, so the moderator can see what was just on screen
+- Answered list (most recent first) and Rejected list (most recent first), below the working lists
 
 ### Actions
 
 - Approve / Reject (pending questions)
 - Display (host-approved questions; auto-answers the current one, see [Display rules](#display-rules))
 - Display now, skipping the host (questions waiting for host review)
-- Remove (displayed question → idle screen)
+- Show now, straight from "To review" (skips the host too)
+- Remove (displayed question → idle screen), through "Clear screen" in the event controls
 - Mark as answered
-- Roll back (re-display the previous question)
-- Keyboard shortcuts on a focused question card: `A` send to host, `R` reject, `S` show on screen, `Alt+↑/↓` change priority. Focus moves to the next card after an action, so a burst of questions can be cleared without the mouse.
+- Roll back (re-display the previous question), or Show again on any question in the Answered list
+- Return to review (questions in the Answered or Rejected lists)
+- Keyboard shortcuts on a focused question card: `A` send to host, `R` reject, `S` show on screen (also from "To review"), `Alt+↑/↓` change priority. Focus moves to the next card after an action, so a burst of questions can be cleared without the mouse.
 - Every action confirms itself with a short toast; errors stay until dismissed. Only the card being acted on is disabled while a request runs.
 - Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
 - Pause / Resume submissions
@@ -397,6 +406,7 @@ QUESTION_DISPLAYED
 QUESTION_REMOVED
 QUESTION_ANSWERED
 QUESTION_REORDERED
+QUESTION_RETURNED_TO_REVIEW
 
 SUBMISSIONS_PAUSED
 SUBMISSIONS_RESUMED
@@ -448,6 +458,7 @@ PATCH  /moderator/questions/:id/display
 PATCH  /moderator/questions/:id/remove
 PATCH  /moderator/questions/:id/answer
 PATCH  /moderator/questions/:id/rollback
+PATCH  /moderator/questions/:id/review
 PATCH  /moderator/questions/reorder        { "ids": ["…", "…"] }
 
 PATCH  /moderator/event/pause
@@ -458,7 +469,7 @@ GET    /moderator/event/status
 
 `PATCH /moderator/questions/reorder` takes question ids from one list (`PENDING`, `MODERATOR_APPROVED` or `HOST_APPROVED`) in their new order. The questions swap the positions they already hold, so questions not in the request (hidden by a category filter, or arriving meanwhile) keep their place. A question entering a list gets the current time as its position, so it lands at the end. Mixed lists return `409`, unknown ids `404`. Emits `QUESTION_REORDERED` to the moderator room (and the host room for the host queue).
 
-`GET /moderator/questions` returns the pending, waiting-for-host, host-approved, displayed and previous (last answered) questions plus `stats` (answered and rejected counts), so one call rebuilds the whole dashboard after a reconnect. "Clear current display" calls `remove` on the displayed question; it doesn't need its own endpoint.
+`GET /moderator/questions` returns the pending, waiting-for-host, host-approved, displayed and previous (last answered) questions, the answered and rejected lists, plus `stats` (answered and rejected counts), so one call rebuilds the whole dashboard after a reconnect. "Clear current display" calls `remove` on the displayed question; it doesn't need its own endpoint.
 
 ### Host
 
@@ -518,6 +529,7 @@ GET /health
 | `host_rejected_at` | nullable |
 | `displayed_at` | nullable |
 | `answered_at` | nullable |
+| `returned_to_review_at` | nullable: last time a rejected or answered question was sent back to review |
 | `updated_at` | |
 
 ### Event state
