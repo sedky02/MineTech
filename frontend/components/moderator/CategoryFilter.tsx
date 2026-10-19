@@ -12,7 +12,7 @@ interface Props {
   onSelect: (slug: string) => void;
 }
 
-/** Filters the three queues by category. Counts cover questions still in a queue. */
+/** Filters every list by category. Counts cover the working lists (To review, With host, Ready). */
 export function CategoryFilter({ categories, counts, total, selected, onSelect }: Props) {
   return (
     <div className={styles.filter} role="group" aria-label="Filter questions by category">

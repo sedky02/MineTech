@@ -1,5 +1,6 @@
 "use client";
 
+import { Google_Sans } from "next/font/google";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
@@ -20,6 +21,16 @@ import { SortableList } from "./SortableList";
 import { ToastRegion, useToasts } from "./Toasts";
 import styles from "./moderator.module.css";
 
+/**
+ * The moderator screen is set in the projector's reading face (Google Sans):
+ * Sarpanch's "a" reads like an "o" at body size, which slows down moderation.
+ */
+const questionFont = Google_Sans({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-question",
+  display: "swap",
+});
+
 /** Pending questions younger than this get a "New" tag. */
 const NEW_FOR_MS = 2 * 60_000;
 const CLOCK_TICK_MS = 30_000;
@@ -27,11 +38,12 @@ const CLOCK_TICK_MS = 30_000;
 const SUCCESS_MESSAGES: Record<ModeratorAction, string> = {
   approve: "Sent to the host",
   reject: "Question rejected",
-  display: "On screen now",
-  remove: "Removed from screen",
+  display: "Shown on screen",
+  // Overridden in the On screen panel: it names the list the question went back to.
+  remove: "Taken off screen",
   answer: "Marked as answered",
-  rollback: "Back on screen",
-  review: "Back in To review",
+  rollback: "Shown again",
+  review: "Returned to review",
 };
 
 /** Actions after which the card leaves its list, so focus moves to its neighbour. */
@@ -53,8 +65,11 @@ function neighbourOf(id: string): string | undefined {
   return (cards[index + 1] ?? cards[index - 1])?.dataset.questionId;
 }
 
+/** Moves keyboard focus to the first enabled button of a card (cards themselves aren't focusable). */
 function focusCard(id: string) {
-  requestAnimationFrame(() => document.querySelector<HTMLElement>(`article[data-question-id="${id}"]`)?.focus());
+  requestAnimationFrame(() =>
+    document.querySelector<HTMLElement>(`article[data-question-id="${id}"] button:not(:disabled)`)?.focus(),
+  );
 }
 
 export function Dashboard() {
@@ -64,7 +79,11 @@ export function Dashboard() {
   );
   const { toasts, push, dismiss } = useToasts();
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
-  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
+  const [categoryFilter, setCategoryFilter] = useState(readTopicFromUrl);
+  const selectCategory = (slug: string) => {
+    setCategoryFilter(slug);
+    writeTopicToUrl(slug);
+  };
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -107,9 +126,19 @@ export function Dashboard() {
     return ok;
   }
 
-  const act = (id: string, action: ModeratorAction) =>
+  /** What a Show button did to the question that was already on screen, if any. */
+  const replacedNote = (action: ModeratorAction) =>
+    !dashboard?.displayed
+      ? ""
+      : action === "display"
+        ? " The one before it is marked answered."
+        : action === "rollback"
+          ? " The one before it went back to its list."
+          : "";
+
+  const act = (id: string, action: ModeratorAction, success = SUCCESS_MESSAGES[action] + replacedNote(action)) =>
     run(`question:${id}`, () => moderatorApi.act(id, action), {
-      success: SUCCESS_MESSAGES[action],
+      success,
       focusNext: LEAVES_LIST.includes(action) ? neighbourOf(id) : undefined,
     });
   const isBusy = (id: string) => busy.has(`question:${id}`);
@@ -157,290 +186,294 @@ export function Dashboard() {
   const visible = (list: ModeratorQuestion[]) =>
     categoryFilter === ALL_CATEGORIES ? list : list.filter((q) => q.category.slug === categoryFilter);
   const shown = { pending: visible(pending), awaitingHost: visible(awaitingHost), ready: visible(ready) };
+  const shownAnswered = visible(answered);
+  const shownRejected = visible(rejected);
   const isNew = (q: ModeratorQuestion) => now - new Date(q.createdAt).getTime() < NEW_FOR_MS;
-  const showLabel = displayed ? "Show (replaces current)" : "Show on screen";
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${questionFont.variable}`}>
       <header className={styles.topbar}>
-        <Wordmark size={36} subtitle={`Moderator · ${auth.user.username}`} />
+        <Wordmark size={36} titleAs="h1" subtitle={`Moderating as ${auth.user.username}`} />
         <ConnectionBadge status={connection} />
         <button className={`btn btn-ghost btn-sm ${styles.logout}`} onClick={auth.logout}>
           Log out
         </button>
       </header>
 
-      <EventControls
-        status={eventStatus}
-        dashboard={dashboard}
-        busy={eventBusy}
-        onToggleSubmissions={() =>
-          eventStatus?.paused
-            ? void run("event", moderatorApi.resume, { success: "Questions are open again" })
-            : void run("event", moderatorApi.pause, { success: "Questions paused" })
-        }
-        onClearScreen={() => displayed && act(displayed.id, "remove")}
-      />
-
-      {connection === "reconnecting" && (
-        <div className="alert" role="status">
-          Live updates are reconnecting. The lists refresh every 5 seconds until they&apos;re back.
-        </div>
-      )}
-      {connection === "unauthorized" && (
-        <div className="alert alert-error" role="alert">
-          Your session expired. <Link href="/login?next=/moderator">Log in again</Link> to keep moderating.
-        </div>
-      )}
-      {error && (
-        <div className="alert alert-error" role="alert">
-          Couldn&apos;t refresh the lists: {error}
-        </div>
-      )}
-
-      <section className={styles.stage}>
-        <div className={`panel ${styles.onScreen}`} data-live={!!displayed || undefined}>
-          <h2 className="panel-title">
-            <span className={styles.liveDot} data-live={!!displayed} aria-hidden /> On screen
-          </h2>
-          {displayed ? (
-            <>
-              <CategoryTag category={displayed.category} />
-              <p className={styles.onScreenText}>{displayed.content}</p>
-              <Author name={displayed.displayName} />
-              <div className={styles.actions}>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => act(displayed.id, "answer")}
-                  disabled={isBusy(displayed.id)}
-                >
-                  Mark answered
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="muted">The projector shows the event logo. Pick a question from Ready to show it.</p>
-          )}
-        </div>
-
-        <div className={`panel ${styles.previous}`}>
-          <h2 className="panel-title">Previous question</h2>
-          {previous ? (
-            <>
-              <CategoryTag category={previous.category} />
-              <p className={styles.content}>{previous.content}</p>
-              <Author name={previous.displayName} />
-              <p className={styles.note}>Answered at {formatTime(previous.answeredAt)}</p>
-              <div className={styles.actions}>
-                <button
-                  className="btn btn-sm btn-quiet"
-                  onClick={() => act(previous.id, "rollback")}
-                  disabled={isBusy(previous.id)}
-                  title={displayed ? "The question on screen goes back to its list" : undefined}
-                >
-                  Roll back to this
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="muted">Answered questions appear here, so you can bring one back.</p>
-          )}
-        </div>
-      </section>
-
-      <div className={styles.listTools}>
-        <CategoryFilter
-          categories={CATEGORIES}
-          counts={counts}
-          total={queued.length}
-          selected={categoryFilter}
-          onSelect={setCategoryFilter}
+      <main className={styles.main}>
+        <EventControls
+          status={eventStatus}
+          dashboard={dashboard}
+          busy={eventBusy}
+          onToggleSubmissions={() =>
+            eventStatus?.paused
+              ? void run("event", moderatorApi.resume, { success: "Questions are open again" })
+              : void run("event", moderatorApi.pause, { success: "Questions paused" })
+          }
+          onClearScreen={() => displayed && act(displayed.id, "remove")}
         />
-        <p className={styles.shortcuts}>
-          Keyboard: Tab to a question, then <kbd>A</kbd> send to host · <kbd>R</kbd> reject · <kbd>S</kbd> show on
-          screen · <kbd>Alt</kbd>+<kbd>↑</kbd>
-          <kbd>↓</kbd> change priority
-        </p>
-      </div>
 
-      <section className={styles.columns}>
-        <Column
-          title="To review"
-          hint="New questions from students"
-          count={shown.pending.length}
-          total={pending.length}
-          attention={pending.length > 0}
-          empty={pending.length ? "No questions in this category." : "No new questions. They appear here instantly."}
-        >
-          <SortableList
-            items={shown.pending}
-            disabled={busy.has("reorder:pending")}
-            onReorder={(ids) => reorder("pending", ids)}
-            renderItem={(q, controls, moves) => (
-              <QuestionCard
-                question={q}
-                column="pending"
-                controls={controls}
-                isNew={isNew(q)}
-                busy={isBusy(q.id)}
-                shortcuts={{
-                  keys: {
-                    a: () => act(q.id, "approve"),
-                    r: () => act(q.id, "reject"),
-                    s: () => act(q.id, "display"),
-                  },
-                  ...moves,
-                }}
-              >
-                <button className="btn btn-sm btn-primary" onClick={() => act(q.id, "approve")} disabled={isBusy(q.id)}>
-                  Send to host
-                </button>
-                <button
-                  className="btn btn-sm btn-lapis"
-                  onClick={() => act(q.id, "display")}
-                  disabled={isBusy(q.id)}
-                  title="Skips the host. Removed later, it goes to the host's queue."
-                >
-                  Show now
-                </button>
-                <button
-                  className="btn btn-sm btn-quiet-danger"
-                  onClick={() => act(q.id, "reject")}
-                  disabled={isBusy(q.id)}
-                >
-                  Reject
-                </button>
-              </QuestionCard>
+        {connection === "reconnecting" && (
+          <div className="alert" role="status">
+            Live updates are reconnecting. The lists refresh every 5 seconds until they&apos;re back.
+          </div>
+        )}
+        {connection === "unauthorized" && (
+          <div className="alert alert-error" role="alert">
+            Your session expired. <Link href="/login?next=/moderator">Log in again</Link> to keep moderating.
+          </div>
+        )}
+        {error && (
+          <div className="alert alert-error" role="alert">
+            Couldn&apos;t refresh the lists: {error}
+          </div>
+        )}
+
+        <section className={styles.stage}>
+          <div className={`panel ${styles.onScreen}`}>
+            <h2 className="panel-title">
+              <span className={styles.liveDot} data-live={!!displayed} aria-hidden /> On screen
+            </h2>
+            {displayed ? (
+              <>
+                <CategoryTag category={displayed.category} />
+                <p className={styles.onScreenText}>{displayed.content}</p>
+                <Author name={displayed.displayName} />
+                <div className={styles.actions}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => act(displayed.id, "answer")}
+                    disabled={isBusy(displayed.id)}
+                  >
+                    Mark answered
+                  </button>
+                  <button
+                    className="btn btn-quiet"
+                    onClick={() =>
+                      act(
+                        displayed.id,
+                        "remove",
+                        displayed.hostApprovedAt ? "Returned to Ready" : "Returned to the host queue",
+                      )
+                    }
+                    disabled={isBusy(displayed.id)}
+                  >
+                    {displayed.hostApprovedAt ? "Return to ready category" : "Return to host queue"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="muted">The projector shows the event logo. Press Show on screen on any question to put it up.</p>
             )}
-          />
-        </Column>
+            {/* The two kinds of Show differ in what happens to the question already up: say it once, here. */}
+            {displayed && (
+              <p className={styles.note}>
+                Showing another question marks this one answered. Show again (from Answered) sends it back to its list.
+              </p>
+            )}
+          </div>
 
-        <Column
-          title="With host"
-          hint="The host approves the first one"
-          count={shown.awaitingHost.length}
-          total={awaitingHost.length}
-          empty={awaitingHost.length ? "No questions in this category." : "Nothing waiting for the host."}
-        >
-          <SortableList
-            items={shown.awaitingHost}
-            disabled={busy.has("reorder:awaitingHost")}
-            onReorder={(ids) => reorder("awaitingHost", ids)}
-            renderItem={(q, controls, moves) => {
-              const place = awaitingHost.findIndex((other) => other.id === q.id);
-              return (
+          <div className={`panel ${styles.previous}`}>
+            <h2 className="panel-title">Previous question</h2>
+            {previous ? (
+              <>
+                <CategoryTag category={previous.category} />
+                <p className={styles.content}>{previous.content}</p>
+                <Author name={previous.displayName} />
+                <p className={styles.note}>Answered at {formatTime(previous.answeredAt)}</p>
+                <div className={styles.actions}>
+                  <button
+                    className="btn btn-sm btn-quiet"
+                    onClick={() => act(previous.id, "rollback")}
+                    disabled={isBusy(previous.id)}
+                  >
+                    Show again
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="muted">Answered questions appear here, so you can bring one back.</p>
+            )}
+          </div>
+        </section>
+
+        <div className={styles.listTools}>
+          <CategoryFilter
+            categories={CATEGORIES}
+            counts={counts}
+            total={queued.length}
+            selected={categoryFilter}
+            onSelect={selectCategory}
+          />
+        </div>
+
+        <section className={styles.columns}>
+          <Column
+            title="1. To review"
+            hint="Read each one, then send it to the host or reject it."
+            count={shown.pending.length}
+            total={pending.length}
+            attention={pending.length > 0}
+            empty={pending.length ? "No questions in this category." : "No new questions. They appear here instantly."}
+          >
+            <SortableList
+              items={shown.pending}
+              disabled={busy.has("reorder:pending")}
+              onReorder={(ids) => reorder("pending", ids)}
+              renderItem={(q, controls) => (
                 <QuestionCard
                   question={q}
-                  column="awaitingHost"
+                  column="pending"
                   controls={controls}
+                  isNew={isNew(q)}
                   busy={isBusy(q.id)}
-                  shortcuts={{ keys: { s: () => act(q.id, "display") }, ...moves }}
-                  note={
-                    place === 0 ? (
-                      <span className={styles.hostPill}>Host is reviewing</span>
-                    ) : (
-                      `#${place + 1} in the host's queue`
-                    )
-                  }
                 >
+                  <button className="btn btn-sm btn-primary" onClick={() => act(q.id, "approve")} disabled={isBusy(q.id)}>
+                    Send to host
+                  </button>
                   <button
-                    className="btn btn-sm btn-lapis"
+                    className="btn btn-sm btn-quiet-danger"
+                    onClick={() => act(q.id, "reject")}
+                    disabled={isBusy(q.id)}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    className={`btn btn-sm btn-quiet ${styles.skipAction}`}
                     onClick={() => act(q.id, "display")}
                     disabled={isBusy(q.id)}
                   >
-                    Show now (skip host)
+                    Show on screen
                   </button>
                 </QuestionCard>
-              );
-            }}
-          />
-        </Column>
+              )}
+            />
+          </Column>
 
-        <Column
-          title="Ready"
-          hint="Approved by the host"
-          count={shown.ready.length}
-          total={ready.length}
-          empty={ready.length ? "No questions in this category." : "Questions the host approves land here."}
-        >
-          <SortableList
-            items={shown.ready}
-            disabled={busy.has("reorder:ready")}
-            onReorder={(ids) => reorder("ready", ids)}
-            renderItem={(q, controls, moves) => (
+          <Column
+            title="2. With host"
+            hint="The host is deciding on the top one."
+            count={shown.awaitingHost.length}
+            total={awaitingHost.length}
+            empty={awaitingHost.length ? "No questions in this category." : "Nothing waiting for the host."}
+          >
+            <SortableList
+              items={shown.awaitingHost}
+              disabled={busy.has("reorder:awaitingHost")}
+              onReorder={(ids) => reorder("awaitingHost", ids)}
+              renderItem={(q, controls) => {
+                const place = awaitingHost.findIndex((other) => other.id === q.id);
+                return (
+                  <QuestionCard
+                    question={q}
+                    column="awaitingHost"
+                    controls={controls}
+                    busy={isBusy(q.id)}
+                    note={
+                      place === 0 ? (
+                        <span className={styles.hostPill}>Host is reviewing</span>
+                      ) : (
+                        `#${place + 1} in the host's queue`
+                      )
+                    }
+                  >
+                    <button
+                      className="btn btn-sm btn-quiet"
+                      onClick={() => act(q.id, "display")}
+                      disabled={isBusy(q.id)}
+                    >
+                      Show on screen
+                    </button>
+                  </QuestionCard>
+                );
+              }}
+            />
+          </Column>
+
+          <Column
+            title="3. Ready"
+            hint="Approved. Show one when the speakers are free."
+            count={shown.ready.length}
+            total={ready.length}
+            empty={ready.length ? "No questions in this category." : "Questions the host approves land here."}
+          >
+            <SortableList
+              items={shown.ready}
+              disabled={busy.has("reorder:ready")}
+              onReorder={(ids) => reorder("ready", ids)}
+              renderItem={(q, controls) => (
+                <QuestionCard
+                  question={q}
+                  column="ready"
+                  controls={controls}
+                  busy={isBusy(q.id)}
+                >
+                  <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={isBusy(q.id)}>
+                    Show on screen
+                  </button>
+                </QuestionCard>
+              )}
+            />
+          </Column>
+        </section>
+
+        <section className={styles.history}>
+          <HistoryPanel
+            id="answered"
+            title="Answered"
+            hint="Already shown, most recent first"
+            count={shownAnswered.length}
+            total={answered.length}
+            empty={answered.length ? "No questions in this category." : "Questions marked answered appear here."}
+          >
+            {shownAnswered.map((q) => (
               <QuestionCard
+                key={q.id}
                 question={q}
-                column="ready"
-                controls={controls}
+                column="answered"
                 busy={isBusy(q.id)}
-                shortcuts={{ keys: { s: () => act(q.id, "display") }, ...moves }}
+                note={`Answered at ${formatTime(q.answeredAt)}`}
               >
-                <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={isBusy(q.id)}>
-                  {showLabel}
+                <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "rollback")} disabled={isBusy(q.id)}>
+                  Show again
+                </button>
+                <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
+                  Return to review
                 </button>
               </QuestionCard>
-            )}
-          />
-        </Column>
-      </section>
+            ))}
+          </HistoryPanel>
 
-      <section className={styles.history}>
-        <HistoryPanel
-          id="answered"
-          title="Answered"
-          hint="Already shown, most recent first"
-          count={answered.length}
-          empty="Questions marked answered appear here."
-        >
-          {answered.map((q) => (
-            <QuestionCard
-              key={q.id}
-              question={q}
-              column="answered"
-              busy={isBusy(q.id)}
-              note={`Answered at ${formatTime(q.answeredAt)}`}
-            >
-              <button
-                className="btn btn-sm btn-lapis"
-                onClick={() => act(q.id, "rollback")}
-                disabled={isBusy(q.id)}
-                title={displayed ? "The question on screen goes back to its list" : undefined}
+          <HistoryPanel
+            id="rejected"
+            title="Rejected"
+            hint="Never shown on screen, most recent first"
+            count={shownRejected.length}
+            total={rejected.length}
+            empty={
+              rejected.length ? "No questions in this category." : "Rejected questions appear here, so you can undo a rejection."
+            }
+          >
+            {shownRejected.map((q) => (
+              <QuestionCard
+                key={q.id}
+                question={q}
+                column="rejected"
+                busy={isBusy(q.id)}
+                note={
+                  q.hostRejectedAt
+                    ? `Rejected by the host at ${formatTime(q.hostRejectedAt)}`
+                    : `Rejected at ${formatTime(q.moderatorRejectedAt)}`
+                }
               >
-                Show again
-              </button>
-              <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
-                Return to review
-              </button>
-            </QuestionCard>
-          ))}
-        </HistoryPanel>
-
-        <HistoryPanel
-          id="rejected"
-          title="Rejected"
-          hint="Never shown to the host or the screen"
-          count={rejected.length}
-          empty="Rejected questions appear here, so you can undo a rejection."
-        >
-          {rejected.map((q) => (
-            <QuestionCard
-              key={q.id}
-              question={q}
-              column="rejected"
-              busy={isBusy(q.id)}
-              note={
-                q.hostRejectedAt
-                  ? `Rejected by the host at ${formatTime(q.hostRejectedAt)}`
-                  : `Rejected at ${formatTime(q.moderatorRejectedAt)}`
-              }
-            >
-              <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
-                Return to review
-              </button>
-            </QuestionCard>
-          ))}
-        </HistoryPanel>
-      </section>
+                <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
+                  Return to review
+                </button>
+              </QuestionCard>
+            ))}
+          </HistoryPanel>
+        </section>
+      </main>
 
       <ToastRegion toasts={toasts} onDismiss={dismiss} />
     </div>
@@ -464,12 +497,31 @@ function writeExpanded(id: string, open: boolean) {
   }
 }
 
-/** A collapsible list (Answered, Rejected); collapsed by default so the working lists stay in view. */
+/** The topic filter lives in the URL (?topic=…), so a reload keeps it. Unknown topics fall back to all. */
+function readTopicFromUrl() {
+  if (typeof window === "undefined") return ALL_CATEGORIES;
+  const topic = new URLSearchParams(window.location.search).get("topic");
+  return topic && CATEGORIES.some((c) => c.slug === topic) ? topic : ALL_CATEGORIES;
+}
+
+function writeTopicToUrl(slug: string) {
+  const url = new URL(window.location.href);
+  if (slug === ALL_CATEGORIES) url.searchParams.delete("topic");
+  else url.searchParams.set("topic", slug);
+  window.history.replaceState(window.history.state, "", url);
+}
+
+/**
+ * A collapsible list (Answered, Rejected); collapsed by default so the working
+ * lists stay in view. The heading holds a disclosure button, so it stays a
+ * real heading for screen readers.
+ */
 function HistoryPanel({
   id,
   title,
   hint,
   count,
+  total,
   empty,
   children,
 }: {
@@ -477,29 +529,39 @@ function HistoryPanel({
   title: string;
   hint: string;
   count: number;
+  total: number;
   empty: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(() => typeof window !== "undefined" && readExpanded(id));
+  const toggle = () => {
+    setOpen(!open);
+    writeExpanded(id, !open);
+  };
   return (
-    <details
-      className={`panel ${styles.column} ${styles.historyPanel}`}
-      open={open}
-      onToggle={(event) => {
-        const next = event.currentTarget.open;
-        setOpen(next);
-        writeExpanded(id, next);
-      }}
-    >
-      <summary className={styles.columnHeader}>
+    <section className={`panel ${styles.column} ${styles.historyPanel}`} data-open={open || undefined}>
+      <div className={styles.columnHeader}>
         <h2 className="panel-title">
-          <span className={styles.chevron} aria-hidden /> {title}
+          <button
+            type="button"
+            className={styles.historyToggle}
+            aria-expanded={open}
+            aria-controls={`${id}-list`}
+            onClick={toggle}
+          >
+            <span className={styles.chevron} aria-hidden /> {title}
+          </button>
         </h2>
-        <span className={styles.count}>{count}</span>
+        <span className={styles.count}>
+          {count}
+          {count !== total && <span className={styles.totalCount}>/{total}</span>}
+        </span>
         <p className={styles.columnHint}>{hint}</p>
-      </summary>
-      <div className={styles.list}>{count === 0 ? <p className="muted">{empty}</p> : children}</div>
-    </details>
+      </div>
+      <div id={`${id}-list`} className={styles.list} hidden={!open}>
+        {count === 0 ? <p className="muted">{empty}</p> : children}
+      </div>
+    </section>
   );
 }
 

@@ -8,13 +8,7 @@ interface SortableListProps<T extends { id: string }> {
   disabled?: boolean;
   /** Called with the ids of `items` in their new order. */
   onReorder: (orderedIds: string[]) => void;
-  renderItem: (item: T, controls: React.ReactNode, moves: Moves) => React.ReactNode;
-}
-
-/** Keyboard reordering for one item (undefined at the ends of the list). */
-export interface Moves {
-  up?: () => void;
-  down?: () => void;
+  renderItem: (item: T, controls: React.ReactNode) => React.ReactNode;
 }
 
 /**
@@ -61,10 +55,6 @@ export function SortableList<T extends { id: string }>({ items, disabled, onReor
   return (
     <>
       {items.map((item, index) => {
-        const moves: Moves = {
-          up: !disabled && index > 0 ? () => move(index, index - 1) : undefined,
-          down: !disabled && index < items.length - 1 ? () => move(index, index + 1) : undefined,
-        };
         const controls = (
           <div className={styles.sortControls}>
             <span className={styles.dragHandle} aria-hidden title="Drag to change priority">
@@ -76,7 +66,7 @@ export function SortableList<T extends { id: string }>({ items, disabled, onReor
               onClick={() => move(index, index - 1)}
               disabled={disabled || index === 0}
               aria-label="Move up"
-              title="Move up (Alt+↑)"
+              title="Move up"
             >
               ▲
             </button>
@@ -86,7 +76,7 @@ export function SortableList<T extends { id: string }>({ items, disabled, onReor
               onClick={() => move(index, index + 1)}
               disabled={disabled || index === items.length - 1}
               aria-label="Move down"
-              title="Move down (Alt+↓)"
+              title="Move down"
             >
               ▼
             </button>
@@ -101,6 +91,7 @@ export function SortableList<T extends { id: string }>({ items, disabled, onReor
             className={styles.sortItem}
             draggable={!disabled && items.length > 1}
             data-dragging={dragId === item.id}
+            data-drag-active={dragId !== null || undefined}
             data-drop={drop}
             onDragStart={(event) => {
               event.dataTransfer.effectAllowed = "move";
@@ -111,7 +102,7 @@ export function SortableList<T extends { id: string }>({ items, disabled, onReor
             onDrop={onDrop}
             onDragEnd={reset}
           >
-            {renderItem(item, controls, moves)}
+            {renderItem(item, controls)}
           </div>
         );
       })}

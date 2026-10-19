@@ -149,7 +149,7 @@ The moderator is the actual operator of the system.
 
 - Summary bar: how many questions are to review, with the host, ready, answered and rejected (the to-review count is highlighted when work is waiting, and also shown in the browser tab title)
 - Pending questions, questions waiting for the host, and host-approved questions, each in its own list ("To review", "With host", "Ready"); questions under 2 minutes old are tagged "New"
-- Category filter (chips with counts) above the three lists
+- Category filter (chips with counts) above the lists; it filters every list, history included
 - Currently displayed question
 - Previous question: the most recently answered question, so the moderator can see what was just on screen
 - Answered list (most recent first) and Rejected list (most recent first), below the working lists
@@ -159,13 +159,15 @@ The moderator is the actual operator of the system.
 - Approve / Reject (pending questions)
 - Display (host-approved questions; auto-answers the current one, see [Display rules](#display-rules))
 - Display now, skipping the host (questions waiting for host review)
-- Show now, straight from "To review" (skips the host too)
-- Remove (displayed question → idle screen), through "Clear screen" in the event controls
+- Show on screen, straight from "To review" (skips the host too)
+- Remove (displayed question → idle screen, question back to its list): "Return to ready category" on the On screen panel ("Return to host queue" if it skipped the host), or "Clear screen" in the event controls
 - Mark as answered
-- Roll back (re-display the previous question), or Show again on any question in the Answered list
+- Show again (roll back): on the previous question or any question in the Answered list
+- Every Show button is labelled "Show on screen" (To review, With host, Ready); "Show again" is the only one that sends the question already on screen back to its list instead of marking it answered, and the On screen panel and the toast say so
+- Category filter applies to every list, including Answered and Rejected, and is kept in the URL (`?topic=`)
 - Return to review (questions in the Answered or Rejected lists)
-- Keyboard shortcuts on a focused question card: `A` send to host, `R` reject, `S` show on screen (also from "To review"), `Alt+↑/↓` change priority. Focus moves to the next card after an action, so a burst of questions can be cleared without the mouse.
-- Every action confirms itself with a short toast; errors stay until dismissed. Only the card being acted on is disabled while a request runs.
+- No letter or Alt+arrow keyboard shortcuts (removed so a stray key can never put a question on screen). Cards are worked with their buttons; after an action, focus moves to the next card's first button.
+- Every action confirms itself with a short toast; errors stay 8 seconds or until dismissed. Only the card being acted on is disabled while a request runs.
 - Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
 - Pause / Resume submissions
 

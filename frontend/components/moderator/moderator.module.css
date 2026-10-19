@@ -1,4 +1,9 @@
+/* An operator screen read under time pressure: body text and buttons use the
+   reading face (Sarpanch's "a" reads like an "o"). Minecraft Ten titles, the
+   block bevels and the colours carry the theme. */
 .page {
+  --font-body: var(--font-question), system-ui, sans-serif;
+  font-family: var(--font-body);
   padding: 16px;
   /* Room to scroll the last rows above the toast area (bottom right). */
   padding-bottom: 140px;
@@ -6,6 +11,19 @@
   gap: 16px;
   max-width: 1600px;
   margin: 0 auto;
+}
+
+/* Panel titles in sentence case, like Minecraft's own menu titles (the global
+   style is all caps, which stays for the host and the other pages). */
+.page :global(.panel-title) {
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.main {
+  display: grid;
+  gap: 16px;
 }
 
 .topbar {
@@ -42,9 +60,7 @@
 }
 
 .summaryItem dt {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 14px;
   color: var(--text-faint);
 }
 
@@ -107,19 +123,17 @@
   align-content: start;
 }
 
-.onScreen[data-live] {
-  border-color: #6b1f15;
-  box-shadow:
-    inset var(--pixel) var(--pixel) 0 var(--bevel-light),
-    inset calc(var(--pixel) * -1) calc(var(--pixel) * -1) 0 var(--bevel-dark),
-    0 0 0 3px var(--redstone);
-}
-
+/* The live question: the one large thing on the page, in the reading face. */
 .onScreenText {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.35;
+  max-width: 38ch;
+  font-family: var(--font-question), system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.3;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  text-wrap: pretty;
 }
 
 .liveDot {
@@ -185,16 +199,6 @@
   gap: 8px;
 }
 
-.shortcuts {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-faint);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-
 .count {
   min-width: 28px;
   font-variant-numeric: tabular-nums;
@@ -208,7 +212,8 @@
 .list {
   display: grid;
   gap: 10px;
-  max-height: max(360px, calc(100dvh - 480px));
+  /* Tall enough for several cards; the page scrolls past the stage to reach it. */
+  max-height: max(480px, calc(100dvh - 220px));
   min-height: 120px;
   overflow-y: auto;
   padding-right: 4px;
@@ -280,8 +285,12 @@
   color: var(--text-faint);
 }
 
+/* Student questions: the reading face, at body size. */
 .content {
   margin: 0;
+  font-family: var(--font-question), system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -294,7 +303,7 @@
 
 .note {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--gold);
 }
 
@@ -302,6 +311,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Skipping review and the host is the exception: set apart at the end of the row. */
+.skipAction {
+  margin-left: auto;
 }
 
 /* ---------------------------------------------------------------- toasts */
@@ -347,6 +361,9 @@
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
+  /* WCAG 2.2 target size: at least 24×24px. */
+  min-width: 32px;
+  min-height: 32px;
   padding: 0 4px;
 }
 
@@ -366,27 +383,46 @@
   max-height: 420px;
 }
 
+/* History lists can grow past 50 cards over an event: skip rendering off-screen ones. */
+.history .card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 150px;
+}
+
 .historyPanel {
   min-height: 0;
 }
 
-.historyPanel > summary {
-  cursor: pointer;
-  list-style: none;
+.historyPanel .columnHeader {
   margin-bottom: 0;
 }
 
-.historyPanel > summary::-webkit-details-marker {
+.historyPanel[data-open] .columnHeader {
+  margin-bottom: 14px;
+}
+
+/* `.list` sets display: grid, which would override the hidden attribute. */
+.historyPanel .list[hidden] {
   display: none;
 }
 
-.historyPanel > summary:focus-visible {
-  outline: 3px solid var(--gold);
-  outline-offset: 4px;
+/* The whole title is the toggle; it keeps the panel title's type. */
+.historyToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
 }
 
-.historyPanel[open] > summary {
-  margin-bottom: 14px;
+.historyToggle:hover {
+  color: var(--gold);
 }
 
 /* A pixel triangle that points right when collapsed and down when open. */
@@ -402,7 +438,7 @@
   transition: transform 150ms ease;
 }
 
-.historyPanel[open] .chevron {
+.historyToggle[aria-expanded="true"] .chevron {
   transform: rotate(90deg);
 }
 
@@ -483,6 +519,11 @@
   opacity: 0.4;
 }
 
+/* No accidental text selection while a card is being dragged. */
+.sortItem[data-drag-active] {
+  user-select: none;
+}
+
 .sortItem[data-drop="before"]::before,
 .sortItem[data-drop="after"]::after {
   content: "";
@@ -502,11 +543,11 @@
   bottom: -7px;
 }
 
+/* In the card's top row, after the time. */
 .sortControls {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
 }
 
 .dragHandle {

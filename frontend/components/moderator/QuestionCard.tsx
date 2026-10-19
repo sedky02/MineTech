@@ -6,7 +6,15 @@ export function formatTime(iso: string | null) {
   return iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 }
 
-export function QuestionMeta({ question, isNew }: { question: ModeratorQuestion; isNew?: boolean }) {
+export function QuestionMeta({
+  question,
+  isNew,
+  controls,
+}: {
+  question: ModeratorQuestion;
+  isNew?: boolean;
+  controls?: React.ReactNode;
+}) {
   return (
     <div className={styles.meta}>
       <CategoryTag category={question.category} />
@@ -15,33 +23,13 @@ export function QuestionMeta({ question, isNew }: { question: ModeratorQuestion;
       <time className={styles.time} dateTime={question.createdAt}>
         {formatTime(question.createdAt)}
       </time>
+      {controls}
     </div>
   );
 }
 
 export function Author({ name }: { name: string | null }) {
   return <p className={styles.author}>{name ? `— ${name}` : "— Anonymous"}</p>;
-}
-
-/** Letter shortcuts (lowercase key → action) and Alt+arrow moves for a focused card. */
-export interface CardShortcuts {
-  keys?: Record<string, () => void>;
-  up?: () => void;
-  down?: () => void;
-}
-
-function handleShortcut(event: React.KeyboardEvent, shortcuts: CardShortcuts) {
-  if (event.ctrlKey || event.metaKey) return;
-  const action = event.altKey
-    ? event.key === "ArrowUp"
-      ? shortcuts.up
-      : event.key === "ArrowDown"
-        ? shortcuts.down
-        : undefined
-    : shortcuts.keys?.[event.key.toLowerCase()];
-  if (!action) return;
-  event.preventDefault();
-  action();
 }
 
 export function QuestionCard({
@@ -52,18 +40,16 @@ export function QuestionCard({
   isNew,
   busy,
   column,
-  shortcuts,
 }: {
   question: ModeratorQuestion;
   children?: React.ReactNode;
   note?: React.ReactNode;
-  /** Reorder controls, shown at the end of the action row. */
+  /** Reorder controls, shown next to the time so the action row only holds actions. */
   controls?: React.ReactNode;
   isNew?: boolean;
   busy?: boolean;
   /** Used to move keyboard focus to the next card after an action. */
   column?: string;
-  shortcuts?: CardShortcuts;
 }) {
   return (
     <article
@@ -72,19 +58,12 @@ export function QuestionCard({
       data-column={column}
       data-busy={busy || undefined}
       aria-busy={busy || undefined}
-      tabIndex={shortcuts ? 0 : undefined}
-      onKeyDown={shortcuts && !busy ? (event) => handleShortcut(event, shortcuts) : undefined}
     >
-      <QuestionMeta question={question} isNew={isNew} />
+      <QuestionMeta question={question} isNew={isNew} controls={controls} />
       <p className={styles.content}>{question.content}</p>
       <Author name={question.displayName} />
       {note && <p className={styles.note}>{note}</p>}
-      {(children || controls) && (
-        <div className={styles.actions}>
-          {children}
-          {controls}
-        </div>
-      )}
+      {children && <div className={styles.actions}>{children}</div>}
     </article>
   );
 }

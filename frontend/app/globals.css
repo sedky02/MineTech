@@ -197,6 +197,9 @@ label {
 }
 .btn-gold {
   --btn-bg: #c99a1d;
+  /* White on this gold is 2.59:1; near-black reaches AA. */
+  color: var(--outline);
+  text-shadow: none;
 }
 .btn-lapis {
   --btn-bg: var(--lapis);
