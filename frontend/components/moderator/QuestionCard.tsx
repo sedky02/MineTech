@@ -18,8 +18,16 @@ export function QuestionMeta({
   return (
     <div className={styles.meta}>
       <CategoryTag category={question.category} />
-      {isNew && <span className={styles.newBadge}>New</span>}
-      {question.source === "PRE_EVENT" && <span className={styles.badge}>Pre-event</span>}
+      {isNew && (
+        <span className={styles.badge} data-tone="new">
+          New
+        </span>
+      )}
+      {question.source === "PRE_EVENT" && (
+        <span className={styles.badge} data-tone="pre-event">
+          Pre-event
+        </span>
+      )}
       <time className={styles.time} dateTime={question.createdAt}>
         {formatTime(question.createdAt)}
       </time>

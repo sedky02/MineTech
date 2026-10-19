@@ -1,92 +1,146 @@
-/* An operator screen read under time pressure: body text and buttons use the
-   reading face (Sarpanch's "a" reads like an "o"). Minecraft Ten titles, the
-   block bevels and the colours carry the theme. */
+/*
+ * Moderator dashboard. An operator screen read under time pressure, so body
+ * text and buttons use the reading face (Sarpanch's "a" reads like an "o");
+ * Minecraft Ten titles and counters, the block bevels and the colours carry
+ * the theme.
+ *
+ * Spacing is on an 8px scale (4px only inside small controls).
+ * Type scale: 12 badges · 14 meta, hints, labels · 16 author, controls ·
+ * 18 questions · 28 the live question.
+ * Button colours: green moves a question forward, blue puts it on the
+ * projector (the main path), yellow pauses, quiet red rejects, grey is for
+ * exceptions, corrections and utilities.
+ */
 .page {
   --font-body: var(--font-question), system-ui, sans-serif;
+  --gap: 16px;
   font-family: var(--font-body);
-  padding: 16px;
-  /* Room to scroll the last rows above the toast area (bottom right). */
-  padding-bottom: 140px;
-  display: grid;
-  gap: 16px;
-  max-width: 1600px;
+  max-width: 1440px;
   margin: 0 auto;
+  padding: 16px 24px 96px;
+  display: grid;
+  gap: var(--gap);
 }
 
-/* Panel titles in sentence case, like Minecraft's own menu titles (the global
-   style is all caps, which stays for the host and the other pages). */
+/* Panels on this page are tighter than the global 20px. */
+.page :global(.panel) {
+  padding: 16px;
+}
+
+/* Section titles: Minecraft Ten (it only has capitals). */
 .page :global(.panel-title) {
   font-size: 14px;
-  letter-spacing: 0.01em;
-  text-transform: none;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--text);
+}
+
+/* Small buttons: a 36px hit area, same bevel. */
+.page :global(.btn-sm) {
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: 15px;
 }
 
 .main {
   display: grid;
-  gap: 16px;
+  gap: var(--gap);
+  min-width: 0;
 }
 
+/* ------------------------------------------------------------------ header */
+
+/* One opaque band: brand and live status on the left, the account on the right. */
 .topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
 }
 
-.logout {
+/* The wordmark component adds vertical margin for page headers; not here. */
+.topbar img {
+  margin-block: 0;
+}
+
+.account {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
 }
 
-/* ------------------------------------------------------------ control bar */
+.user {
+  font-size: 14px;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.user strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------- control bar */
 
 .controlBar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px 28px;
-  padding: 12px 16px;
+  gap: 16px 24px;
+}
+
+.page .controlBar {
+  padding: 8px 16px;
 }
 
 .summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 22px;
+  gap: 8px 24px;
   margin: 0;
 }
 
 .summaryItem {
   display: grid;
-  gap: 2px;
+  gap: 0;
+  min-width: 56px;
 }
 
 .summaryItem dt {
   font-size: 14px;
-  color: var(--text-faint);
+  color: var(--text-dim);
 }
 
 .summaryItem dd {
   margin: 0;
   font-family: var(--font-display);
   font-size: 16px;
+  line-height: 1.6;
   font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
+/* Work waiting: the one number that should pull the eye. */
 .summaryItem[data-attention] dd {
   color: var(--gold);
 }
 
+/* Answered and rejected are history: still readable, quieter. */
+.summaryItem[data-tone="history"] dd {
+  color: var(--text-dim);
+}
+
+/* Questions open/paused, with its toggle. */
 .submissions {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-/* Emergency actions sit apart, behind a divider, at lower visual weight. */
-.danger {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-  padding-left: 20px;
+  gap: 8px 16px;
+  padding-left: 24px;
   border-left: 3px solid var(--outline);
 }
 
@@ -97,6 +151,7 @@
   gap: 8px;
   font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .submissionState::before {
@@ -111,23 +166,36 @@
   background: var(--gold);
 }
 
+/* Emergency actions sit at the end, behind a divider, at lower visual weight. */
+.danger {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  padding-left: 24px;
+  border-left: 3px solid var(--outline);
+}
+
+/* -------------------------------------------------------------------- stage */
+
 .stage {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
 }
 
-.onScreen {
+.onScreen,
+.previous {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   align-content: start;
+  min-width: 0;
 }
 
-/* The live question: the one large thing on the page, in the reading face. */
+/* The live question: the one large thing on the page. */
 .onScreenText {
   margin: 0;
-  max-width: 38ch;
-  font-family: var(--font-question), system-ui, sans-serif;
+  max-width: 40ch;
   font-size: 28px;
   font-weight: 500;
   line-height: 1.3;
@@ -139,6 +207,7 @@
 .liveDot {
   width: 12px;
   height: 12px;
+  flex-shrink: 0;
   background: var(--stone-dark);
   border: 2px solid var(--outline);
 }
@@ -154,84 +223,159 @@
   }
 }
 
-.previous {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  opacity: 0.9;
+/* Author on the left, when it was answered on the right. */
+.previousMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
 }
+
+.previousMeta .author {
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------ list filter */
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 12px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
+  box-shadow:
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filterChip:hover {
+  background: #262834;
+}
+
+.filterChip:active {
+  box-shadow:
+    inset -2px -2px 0 var(--bevel-light),
+    inset 2px 2px 0 var(--bevel-dark);
+}
+
+/* Selected: gold frame and a sunken fill, not colour alone (aria-pressed is set too). */
+.filterChip[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: #2f2b1d;
+  font-weight: 600;
+}
+
+.filterCount {
+  min-width: 24px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  background: var(--panel-inset);
+  border: 2px solid var(--outline);
+}
+
+/* ------------------------------------------------------------ queue columns */
 
 .columns {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--gap);
   align-items: start;
 }
 
 .column {
-  padding: 16px;
-  min-height: 200px;
+  display: grid;
+  gap: 16px;
   min-width: 0;
 }
 
+/* Title and count stay put while the list under them scrolls. */
 .columnHeader {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 2px 10px;
-  margin-bottom: 14px;
-}
-
-.columnHeader :global(.panel-title) {
-  margin: 0;
-  color: var(--text);
+  gap: 4px 8px;
 }
 
 .columnHint {
   grid-column: 1 / -1;
   margin: 0;
   font-size: 14px;
-  color: var(--text-faint);
-}
-
-.listTools {
-  display: grid;
-  gap: 8px;
+  color: var(--text-dim);
 }
 
 .count {
-  min-width: 28px;
-  font-variant-numeric: tabular-nums;
-  padding: 2px 6px;
+  min-width: 32px;
+  padding: 2px 8px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
   background: var(--panel-inset);
   border: 2px solid var(--outline);
   color: var(--text);
 }
 
+.count[data-attention] {
+  background: var(--gold);
+  color: var(--outline);
+}
+
+.totalCount {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/*
+ * Each list scrolls on its own, sized so a whole column fits in the viewport
+ * once it's scrolled into view. The bottom padding leaves the last card clear
+ * of the edge.
+ */
 .list {
   display: grid;
-  gap: 10px;
-  /* Tall enough for several cards; the page scrolls past the stage to reach it. */
-  max-height: max(480px, calc(100dvh - 220px));
-  min-height: 120px;
+  gap: 8px;
+  align-content: start;
+  max-height: max(360px, calc(100dvh - 200px));
   overflow-y: auto;
-  padding-right: 4px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 4px 8px 0;
 }
+
+/* Nothing in the list: one compact line in an inset box. */
+.empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 14px;
+  color: var(--text-dim);
+  background: var(--panel-inset);
+  border: 2px solid var(--outline);
+}
+
+/* ------------------------------------------------------------ question cards */
 
 .card {
   background: var(--bg-raised);
   border: 3px solid var(--outline);
-  padding: 12px;
+  padding: 16px;
   display: grid;
   gap: 8px;
+  min-width: 0;
   animation: slide-in 200ms steps(3) both;
   transition: opacity 120ms;
-}
-
-.card:focus-visible {
-  outline: 3px solid var(--gold);
-  outline-offset: 1px;
 }
 
 /* Only the card being acted on dims; the rest of the page stays usable. */
@@ -247,58 +391,57 @@
   }
 }
 
+/* 1. topic, badges, time and priority controls */
 .meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-height: 36px;
 }
 
-.newBadge {
+/* One badge style; the fill says which. */
+.badge {
+  padding: 0 8px;
   font-size: 12px;
   font-weight: 600;
-  padding: 1px 6px;
+  line-height: 20px;
+  border: 2px solid var(--outline);
+  white-space: nowrap;
+}
+
+.badge[data-tone="new"] {
   background: var(--gold);
   color: var(--outline);
-  border: 2px solid var(--outline);
 }
 
-.hostPill {
-  display: inline-block;
-  padding: 1px 8px;
-  border: 2px solid var(--outline);
-  background: #2f2b1d;
-  color: var(--gold);
-}
-
-.badge {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 1px 6px;
+.badge[data-tone="pre-event"] {
   background: var(--amethyst);
-  border: 2px solid var(--outline);
+  color: #fff;
 }
 
 .time {
   margin-left: auto;
-  font-size: 13px;
-  color: var(--text-faint);
+  font-size: 14px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
-/* Student questions: the reading face, at body size. */
+/* 2. the question */
 .content {
   margin: 0;
-  font-family: var(--font-question), system-ui, sans-serif;
   font-size: 18px;
   line-height: 1.45;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
+/* 3. who asked */
 .author {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-dim);
+  overflow-wrap: anywhere;
 }
 
 .note {
@@ -307,9 +450,19 @@
   color: var(--gold);
 }
 
+.hostPill {
+  display: inline-block;
+  padding: 0 8px;
+  border: 2px solid var(--outline);
+  background: #2f2b1d;
+  color: var(--gold);
+}
+
+/* 4. actions */
 .actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
@@ -318,194 +471,7 @@
   margin-left: auto;
 }
 
-/* ---------------------------------------------------------------- toasts */
-
-.toasts {
-  /* Only the toasts themselves take clicks; the gaps between them don't. */
-  pointer-events: none;
-  position: fixed;
-  right: 16px;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index: 20;
-  display: grid;
-  gap: 8px;
-  width: min(380px, calc(100vw - 32px));
-}
-
-.toast {
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--bg-raised);
-  border: 3px solid var(--outline);
-  border-left: 8px solid var(--grass);
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
-  animation: slide-in 160ms steps(3) both;
-}
-
-.toast[data-tone="error"] {
-  border-left-color: var(--redstone);
-}
-
-.toast > span {
-  flex: 1;
-  min-width: 0;
-}
-
-.toastClose {
-  background: none;
-  border: 0;
-  color: var(--text-dim);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  /* WCAG 2.2 target size: at least 24×24px. */
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0 4px;
-}
-
-.toastClose:hover {
-  color: var(--text);
-}
-
-/* Answered and rejected questions, below the working lists. */
-.history {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.history .list {
-  max-height: 420px;
-}
-
-/* History lists can grow past 50 cards over an event: skip rendering off-screen ones. */
-.history .card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 150px;
-}
-
-.historyPanel {
-  min-height: 0;
-}
-
-.historyPanel .columnHeader {
-  margin-bottom: 0;
-}
-
-.historyPanel[data-open] .columnHeader {
-  margin-bottom: 14px;
-}
-
-/* `.list` sets display: grid, which would override the hidden attribute. */
-.historyPanel .list[hidden] {
-  display: none;
-}
-
-/* The whole title is the toggle; it keeps the panel title's type. */
-.historyToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 0;
-  background: none;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  cursor: pointer;
-}
-
-.historyToggle:hover {
-  color: var(--gold);
-}
-
-/* A pixel triangle that points right when collapsed and down when open. */
-.chevron {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  margin-right: 6px;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-left: 9px solid currentColor;
-  vertical-align: middle;
-  transition: transform 150ms ease;
-}
-
-.historyToggle[aria-expanded="true"] .chevron {
-  transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chevron {
-    transition: none;
-  }
-}
-
-@media (max-width: 1100px) {
-  .stage,
-  .columns,
-  .history {
-    grid-template-columns: 1fr;
-  }
-
-  .danger {
-    margin-left: 0;
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .list {
-    max-height: none;
-  }
-}
-
-/* ------------------------------------------------------- category filter */
-
-.filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.filterChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 4px 12px;
-  background: var(--bg-raised);
-  border: 3px solid var(--outline);
-  box-shadow: inset 2px 2px 0 var(--bevel-light), inset -2px -2px 0 var(--bevel-dark);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.filterChip:hover {
-  background: #262834;
-}
-
-.filterChip[aria-pressed="true"] {
-  border-color: var(--gold);
-  background: #2f2b1d;
-}
-
-.filterCount {
-  min-width: 22px;
-  padding: 0 4px;
-  text-align: center;
-  font-size: 13px;
-  background: var(--panel-inset);
-  border: 2px solid var(--outline);
-}
-
-/* ------------------------------------------------------- drag and drop */
+/* ------------------------------------------------------------ drag and drop */
 
 .sortItem {
   position: relative;
@@ -536,11 +502,11 @@
 }
 
 .sortItem[data-drop="before"]::before {
-  top: -7px;
+  top: -6px;
 }
 
 .sortItem[data-drop="after"]::after {
-  bottom: -7px;
+  bottom: -6px;
 }
 
 /* In the card's top row, after the time. */
@@ -551,27 +517,35 @@
 }
 
 .dragHandle {
-  color: var(--text-faint);
+  color: var(--text-dim);
   font-size: 18px;
   line-height: 1;
   padding: 0 4px;
 }
 
 .sortButton {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   background: var(--panel);
   border: 2px solid var(--outline);
-  color: var(--text-dim);
-  font-size: 11px;
+  box-shadow:
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark);
+  color: var(--text);
+  font-size: 12px;
   cursor: pointer;
 }
 
 .sortButton:hover:not(:disabled) {
-  color: var(--text);
   background: #343744;
+}
+
+.sortButton:active:not(:disabled) {
+  box-shadow:
+    inset -2px -2px 0 var(--bevel-light),
+    inset 2px 2px 0 var(--bevel-dark);
 }
 
 .sortButton:disabled {
@@ -579,12 +553,205 @@
   cursor: default;
 }
 
-.totalCount {
-  color: var(--text-faint);
-  font-size: 12px;
+/* ------------------------------------------------------------ history lists */
+
+.history {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
 }
 
-.count[data-attention] {
-  background: var(--gold);
-  color: var(--outline);
+.history .list {
+  max-height: 480px;
+}
+
+/* History lists can grow past 50 cards over an event: skip rendering off-screen ones. */
+.history .card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
+}
+
+/* Collapsed: just the header. */
+.historyPanel:not([data-open]) {
+  gap: 0;
+}
+
+/* `.list` sets display: grid, which would override the hidden attribute. */
+.historyPanel .list[hidden] {
+  display: none;
+}
+
+/* The whole title is the toggle; it keeps the panel title's type. */
+.historyToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.historyToggle:hover {
+  color: var(--gold);
+}
+
+/* A pixel triangle that points right when collapsed and down when open. */
+.chevron {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 9px solid currentColor;
+  transition: transform 150ms ease;
+}
+
+.historyToggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+/* ------------------------------------------------------------------- toasts */
+
+.toasts {
+  /* Only the toasts themselves take clicks; the gaps between them don't. */
+  pointer-events: none;
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  background: var(--bg-raised);
+  border: 3px solid var(--outline);
+  border-left: 8px solid var(--grass);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+  animation: slide-in 160ms steps(3) both;
+}
+
+.toast[data-tone="error"] {
+  border-left-color: var(--redstone);
+}
+
+.toast > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.toastClose {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toastClose:hover {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+/* Medium: two queue columns (Ready wraps under To review), panels stack. */
+@media (max-width: 1199px) {
+  .columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The control bar may wrap here: drop the dividers that only make sense on one row. */
+  .submissions,
+  .danger {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 899px) {
+  .history {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Narrow: one queue column; each list still scrolls on its own. */
+@media (max-width: 759px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .list {
+    max-height: 70dvh;
+  }
+}
+
+/* Phones: tighter gutter, filters scroll sideways instead of wrapping. */
+@media (max-width: 639px) {
+  .page {
+    --gap: 12px;
+    padding: 12px 16px 96px;
+  }
+
+  /* Five counters in one even row. */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .summaryItem {
+    min-width: 0;
+  }
+
+  .summaryItem dt {
+    font-size: 12px;
+  }
+
+  .danger {
+    margin-left: 0;
+  }
+
+  .filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 8px;
+  }
+
+  .onScreenText {
+    font-size: 22px;
+  }
+
+  .account {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
 }

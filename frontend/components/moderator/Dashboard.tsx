@@ -193,11 +193,16 @@ export function Dashboard() {
   return (
     <div className={`${styles.page} ${questionFont.variable}`}>
       <header className={styles.topbar}>
-        <Wordmark size={36} titleAs="h1" subtitle={`Moderating as ${auth.user.username}`} />
+        <Wordmark size={32} titleAs="h1" />
         <ConnectionBadge status={connection} />
-        <button className={`btn btn-ghost btn-sm ${styles.logout}`} onClick={auth.logout}>
-          Log out
-        </button>
+        <div className={styles.account}>
+          <span className={styles.user}>
+            Moderating as <strong>{auth.user.username}</strong>
+          </span>
+          <button className="btn btn-quiet btn-sm" onClick={auth.logout}>
+            Log out
+          </button>
+        </div>
       </header>
 
       <main className={styles.main}>
@@ -279,8 +284,10 @@ export function Dashboard() {
               <>
                 <CategoryTag category={previous.category} />
                 <p className={styles.content}>{previous.content}</p>
-                <Author name={previous.displayName} />
-                <p className={styles.note}>Answered at {formatTime(previous.answeredAt)}</p>
+                <div className={styles.previousMeta}>
+                  <Author name={previous.displayName} />
+                  <p className={styles.note}>Answered at {formatTime(previous.answeredAt)}</p>
+                </div>
                 <div className={styles.actions}>
                   <button
                     className="btn btn-sm btn-quiet"
@@ -297,15 +304,13 @@ export function Dashboard() {
           </div>
         </section>
 
-        <div className={styles.listTools}>
-          <CategoryFilter
-            categories={CATEGORIES}
-            counts={counts}
-            total={queued.length}
-            selected={categoryFilter}
-            onSelect={selectCategory}
-          />
-        </div>
+        <CategoryFilter
+          categories={CATEGORIES}
+          counts={counts}
+          total={queued.length}
+          selected={categoryFilter}
+          onSelect={selectCategory}
+        />
 
         <section className={styles.columns}>
           <Column
@@ -559,7 +564,7 @@ function HistoryPanel({
         <p className={styles.columnHint}>{hint}</p>
       </div>
       <div id={`${id}-list`} className={styles.list} hidden={!open}>
-        {count === 0 ? <p className="muted">{empty}</p> : children}
+        {count === 0 ? <p className={styles.empty}>{empty}</p> : children}
       </div>
     </section>
   );
@@ -592,7 +597,7 @@ function Column({
         </span>
         <p className={styles.columnHint}>{hint}</p>
       </div>
-      <div className={styles.list}>{count === 0 ? <p className="muted">{empty}</p> : children}</div>
+      <div className={styles.list}>{count === 0 ? <p className={styles.empty}>{empty}</p> : children}</div>
     </div>
   );
 }

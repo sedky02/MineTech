@@ -18,19 +18,24 @@ export function EventControls({ status, dashboard, busy, onToggleSubmissions, on
   const state = status?.paused ? "paused" : "open";
   const stateLabel = state === "paused" ? "Questions paused" : "Questions open";
 
-  const summary = [
+  const summary: { label: string; value: number; attention?: boolean; tone?: "history" }[] = [
     { label: "To review", value: dashboard.pending.length, attention: dashboard.pending.length > 0 },
     { label: "With host", value: dashboard.awaitingHost.length },
     { label: "Ready", value: dashboard.ready.length },
-    { label: "Answered", value: dashboard.stats.answered },
-    { label: "Rejected", value: dashboard.stats.rejected },
+    { label: "Answered", value: dashboard.stats.answered, tone: "history" },
+    { label: "Rejected", value: dashboard.stats.rejected, tone: "history" },
   ];
 
   return (
     <section className={`panel ${styles.controlBar}`} aria-label="Event controls">
       <dl className={styles.summary}>
         {summary.map((item) => (
-          <div key={item.label} className={styles.summaryItem} data-attention={item.attention || undefined}>
+          <div
+            key={item.label}
+            className={styles.summaryItem}
+            data-attention={item.attention || undefined}
+            data-tone={item.tone}
+          >
             <dt>{item.label}</dt>
             <dd>{item.value}</dd>
           </div>
