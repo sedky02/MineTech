@@ -177,11 +177,12 @@
 
 /* -------------------------------------------------------------------- stage */
 
+/* Panels in a row share one height, so the row has one clean bottom edge. */
 .stage {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--gap);
-  align-items: start;
+  align-items: stretch;
 }
 
 .onScreen,
@@ -295,11 +296,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--gap);
-  align-items: start;
+  align-items: stretch;
 }
 
+/* Header on top, the list fills the rest. */
 .column {
   display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
   gap: 16px;
   min-width: 0;
 }
@@ -351,10 +355,17 @@
   max-height: max(360px, calc(100dvh - 200px));
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  /* The list reaches into the panel's 16px side padding. A thin scrollbar
+     (10px) gets a lane reserved on both sides, plus 14px of padding: the cards
+     sit 8px inside the column title on each side where scrollbars take space
+     (Windows, Linux) and stay centred where they float over the content (macOS). */
+  margin-inline: -16px;
+  padding: 0 14px 24px;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: var(--stone) transparent;
   /* A card cut by the bottom edge fades out, which says "more below". The
-     padding matches the fade, so at the end of the list nothing is faded. */
-  padding: 0 4px 24px 0;
+     bottom padding matches the fade, so at the end of the list nothing is faded. */
   mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 
@@ -575,7 +586,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gap);
-  align-items: start;
+  align-items: stretch;
 }
 
 .history .list {
