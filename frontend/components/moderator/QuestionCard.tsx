@@ -28,10 +28,13 @@ export function QuestionMeta({
           Pre-event
         </span>
       )}
-      <time className={styles.time} dateTime={question.createdAt}>
-        {formatTime(question.createdAt)}
-      </time>
-      {controls}
+      {/* Time and priority controls stay together, so on a narrow card they wrap as one group, on the right. */}
+      <span className={styles.metaEnd}>
+        <time className={styles.time} dateTime={question.createdAt}>
+          {formatTime(question.createdAt)}
+        </time>
+        {controls}
+      </span>
     </div>
   );
 }

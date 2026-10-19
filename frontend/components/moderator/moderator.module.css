@@ -352,7 +352,10 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 0 4px 8px 0;
+  /* A card cut by the bottom edge fades out, which says "more below". The
+     padding matches the fade, so at the end of the list nothing is faded. */
+  padding: 0 4px 24px 0;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 
 /* Nothing in the list: one compact line in an inset box. */
@@ -420,8 +423,14 @@
   color: #fff;
 }
 
-.time {
+.metaEnd {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time {
   font-size: 14px;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
@@ -521,6 +530,13 @@
   font-size: 18px;
   line-height: 1;
   padding: 0 4px;
+}
+
+/* Native drag and drop doesn't work with touch: the ▲▼ buttons are the way there. */
+@media (pointer: coarse) {
+  .dragHandle {
+    display: none;
+  }
 }
 
 .sortButton {
