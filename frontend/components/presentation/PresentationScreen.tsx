@@ -160,7 +160,7 @@ export function PresentationScreen() {
             </p>
             <p className={styles.author}>{shown.displayName ?? "Anonymous"}</p>
           </section>
-          {/* Stays put between questions; only fades with the card when the screen goes idle. */}
+          {/* Stays put between questions; only fades with the card when the screen goes idle. please work deployyyyy*/}
           <p className={`${styles.cta} ${leaving ? styles.leaving : ""}`}>
             Ask your questions live here: <strong>{ASK_URL}</strong>
           </p>
