@@ -2,7 +2,7 @@
 
 import { Google_Sans } from "next/font/google";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CategoryTag } from "@/components/ui/CategoryTag";
 import { ClubCredit, WordmarkLogo } from "@/components/ui/Logo";
 import { useSocket } from "@/hooks/useSocket";
@@ -27,16 +27,8 @@ const CURSOR_HIDE_MS = 2500;
 /** How long a cleared question stays mounted to animate out: a little longer than the 240ms CSS exit. */
 const EXIT_MS = 280;
 
-const noSubscription = () => () => undefined;
-
-/**
- * The address students should open: the participant page is the root of the
- * same site, so this is the host the projector is showing. Empty during the
- * static prerender, filled in once the page runs in the browser.
- */
-function useSiteAddress() {
-  return useSyncExternalStore(noSubscription, () => window.location.host, () => "");
-}
+/** Where students open the question form, shown under the projected question. */
+const ASK_URL = "https://minetech-gdgc.vercel.app/";
 
 /**
  * Keeps the last question mounted for a moment after it clears, so it can
@@ -87,7 +79,6 @@ function sizeFor(length: number) {
 export function PresentationScreen() {
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [cursorHidden, setCursorHidden] = useState(false);
-  const siteAddress = useSiteAddress();
   const { shown, leaving } = useDepartingQuestion(question);
   // Bumped on every socket event so an older REST response can't overwrite newer state.
   const version = useRef(0);
@@ -153,21 +144,27 @@ export function PresentationScreen() {
 
       {/* The card stays mounted while it animates out; the idle logo fades in underneath it. */}
       {shown && (
-        <section
-          key={shown.id}
-          className={`${styles.question} ${leaving ? styles.leaving : ""}`}
-          aria-live="polite"
-          aria-hidden={leaving || undefined}
-        >
-          <div className={styles.questionHeader}>
-            <CategoryTag category={shown.category} large />
-            <WordmarkLogo height={36} className={styles.brand} />
-          </div>
-          <p className={styles.text} data-size={sizeFor(shown.content.length)}>
-            {shown.content}
+        <div className={styles.stage}>
+          <section
+            key={shown.id}
+            className={`${styles.question} ${leaving ? styles.leaving : ""}`}
+            aria-live="polite"
+            aria-hidden={leaving || undefined}
+          >
+            <div className={styles.questionHeader}>
+              <CategoryTag category={shown.category} large />
+              <WordmarkLogo height={36} className={styles.brand} />
+            </div>
+            <p className={styles.text} data-size={sizeFor(shown.content.length)}>
+              {shown.content}
+            </p>
+            <p className={styles.author}>{shown.displayName ?? "Anonymous"}</p>
+          </section>
+          {/* Stays put between questions; only fades with the card when the screen goes idle. */}
+          <p className={`${styles.cta} ${leaving ? styles.leaving : ""}`}>
+            Ask your questions live here: <strong>{ASK_URL}</strong>
           </p>
-          <p className={styles.author}>{shown.displayName ?? "Anonymous"}</p>
-        </section>
+        </div>
       )}
 
       {!question && (

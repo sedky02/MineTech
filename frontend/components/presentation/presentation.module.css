@@ -33,9 +33,17 @@
 }
 
 /* The question card and the idle logo share one grid cell, so one can fade in as the other leaves. */
-.question,
+.stage,
 .idle {
   grid-area: 1 / 1;
+}
+
+/* The question card with the "ask here" note underneath it. */
+.stage {
+  display: grid;
+  justify-items: center;
+  gap: 3vh;
+  margin-bottom: 6vh;
 }
 
 .idle {
@@ -96,10 +104,22 @@
 }
 
 .cta {
-  margin: 1vh 0 0;
-  font-size: clamp(20px, 2.4vw, 46px);
+  margin: 0;
+  font-size: clamp(18px, 2vw, 40px);
   color: var(--text);
+  text-align: center;
   text-shadow: 0.08em 0.08em 0 var(--outline);
+  animation: arrive 500ms ease-out both;
+}
+
+.cta.leaving {
+  animation: fade-out 240ms ease-in both;
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
 }
 
 .cta strong {
@@ -109,9 +129,9 @@
 .question {
   position: relative;
   width: min(88vw, 1600px);
-  max-height: 82vh;
+  /* Leaves room for the note below and the ground strip. */
+  max-height: 74vh;
   padding: 4vh 4vw;
-  margin-bottom: 6vh;
   background: rgba(20, 21, 27, 0.92);
   border: 6px solid var(--outline);
   box-shadow:
