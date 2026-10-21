@@ -76,10 +76,10 @@ PENDING → MODERATOR_APPROVED → HOST_APPROVED → DISPLAYED ⇄ ANSWERED
 REJECTED        REJECTED
 (moderator)     (host)
 
-REJECTED | ANSWERED → PENDING   (moderator: "Return to review")
+MODERATOR_APPROVED | HOST_APPROVED | REJECTED | ANSWERED → PENDING   (moderator: "Return to review")
 ```
 
-- Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `MODERATOR_APPROVED → DISPLAYED` (skip the host), `PENDING → DISPLAYED` ("Show on screen" from To review: sets `moderator_approved_at`, skips the host, host not notified), `DISPLAYED → ANSWERED`, `DISPLAYED → back where it came from` (remove), `any ANSWERED → DISPLAYED` (rollback / "Show again"), `REJECTED | ANSWERED → PENDING` (return to review: clears the workflow timestamps, sets `returned_to_review_at`, moderator room only).
+- Moderator: `PENDING → MODERATOR_APPROVED | REJECTED`, `HOST_APPROVED → DISPLAYED`, `MODERATOR_APPROVED → DISPLAYED` (skip the host), `PENDING → DISPLAYED` ("Show on screen" from To review: sets `moderator_approved_at`, skips the host, host not notified), `DISPLAYED → ANSWERED`, `DISPLAYED → back where it came from` (remove), `any ANSWERED → DISPLAYED` (rollback / "Show again"), `MODERATOR_APPROVED | HOST_APPROVED | REJECTED | ANSWERED → PENDING` (return to review: clears the workflow timestamps, sets `returned_to_review_at`; moderator room, plus the host room when it came from the host's queue).
 - "Back where it came from" = `HOST_APPROVED` if `host_approved_at` is set, else `MODERATOR_APPROVED` (host queue). Remove and rollback both use this (`statusBeforeDisplay` in the questions service).
 - Lists are ordered by `position` (then `created_at`). Entering a list sets `position` to the current time (end of list); `PATCH /moderator/questions/reorder` permutes the positions of the given ids only. The host sees the first `MODERATOR_APPROVED` by position. The frontend mirrors this rule for optimistic updates (`applySubsetOrder` in `hooks/useQuestions.ts`).
 - Host: `MODERATOR_APPROVED → HOST_APPROVED | REJECTED`.

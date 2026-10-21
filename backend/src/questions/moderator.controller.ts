@@ -64,7 +64,7 @@ export class ModeratorController {
     return this.questions.answer(id);
   }
 
-  /** Rejected or answered question → "To review". */
+  /** Waiting for host, ready, rejected or answered question → "To review". */
   @Patch('questions/:id/review')
   returnToReview(@Param('id', ParseUUIDPipe) id: string) {
     return this.questions.returnToReview(id);

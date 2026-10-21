@@ -121,7 +121,7 @@ The backend enforces these. Any other transition is rejected.
 | `DISPLAYED` | `ANSWERED` | Moderator | `PATCH /moderator/questions/:id/answer` |
 | `DISPLAYED` | `HOST_APPROVED`, or `MODERATOR_APPROVED` if it skipped the host | Moderator | `PATCH /moderator/questions/:id/remove` |
 | `ANSWERED` | `DISPLAYED` | Moderator | `PATCH /moderator/questions/:id/rollback` |
-| `REJECTED` or `ANSWERED` | `PENDING` | Moderator | `PATCH /moderator/questions/:id/review` |
+| `MODERATOR_APPROVED`, `HOST_APPROVED`, `REJECTED` or `ANSWERED` | `PENDING` | Moderator | `PATCH /moderator/questions/:id/review` |
 
 ### Display rules
 
@@ -131,7 +131,7 @@ The backend enforces these. Any other transition is rejected.
 - **Remove:** the question goes back to where it came from (`HOST_APPROVED`, or the host's queue if it skipped the host), so it can be displayed again later, and the presentation switches to the idle screen (event logo + event name).
 - **Answer:** the question becomes `ANSWERED`, and the presentation switches to the idle screen.
 - **Roll back / Show again:** re-displays an answered question (usually the previous one) and clears its `answered_at`. The question on screen, if any, was interrupted rather than answered, so it goes back to where it came from, as with Remove. Rolling back again walks further back through the history.
-- **Return to review:** a rejected or answered question goes back to the end of "To review" as if it had just arrived. Its workflow timestamps (`moderator_*`, `host_*`, `displayed_at`, `answered_at`) are cleared so it goes through the moderator and the host again, and `returned_to_review_at` is set. Only the moderator room is notified (`QUESTION_RETURNED_TO_REVIEW`): neither state was ever visible to the host or the presentation.
+- **Return to review:** a question waiting for the host, ready, rejected or answered goes back to the end of "To review" as if it had just arrived. Its workflow timestamps (`moderator_*`, `host_*`, `displayed_at`, `answered_at`) are cleared so it goes through the moderator and the host again, and `returned_to_review_at` is set. The moderator room is notified (`QUESTION_RETURNED_TO_REVIEW`); the host room too when the question came from its queue, so the host view moves on. The presentation never is: none of these states is visible on screen.
 
 ### Guarantees
 
@@ -165,7 +165,7 @@ The moderator is the actual operator of the system.
 - Show again (roll back): on the previous question or any question in the Answered list
 - Every Show button is labelled "Show on screen" (To review, With host, Ready); "Show again" is the only one that sends the question already on screen back to its list instead of marking it answered, and the On screen panel and the toast say so
 - Category filter applies to every list, including Answered and Rejected, and is kept in the URL (`?topic=`)
-- Return to review (questions in the Answered or Rejected lists)
+- Return to review (questions in the With host, Ready, Answered or Rejected lists)
 - No letter or Alt+arrow keyboard shortcuts (removed so a stray key can never put a question on screen). Cards are worked with their buttons; after an action, focus moves to the next card's first button.
 - Every action confirms itself with a short toast; errors stay 8 seconds or until dismissed. Only the card being acted on is disabled while a request runs.
 - Change priority: drag and drop (or ▲/▼) within a list. In "Waiting for host" this decides which question the host sees next; in "Ready to display" it is the moderator's running order.
@@ -531,7 +531,7 @@ GET /health
 | `host_rejected_at` | nullable |
 | `displayed_at` | nullable |
 | `answered_at` | nullable |
-| `returned_to_review_at` | nullable: last time a rejected or answered question was sent back to review |
+| `returned_to_review_at` | nullable: last time a question was sent back to review |
 | `updated_at` | |
 
 ### Event state

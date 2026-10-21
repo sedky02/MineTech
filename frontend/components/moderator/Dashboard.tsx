@@ -389,6 +389,9 @@ export function Dashboard() {
                     >
                       Show on screen
                     </button>
+                    <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
+                      Return to review
+                    </button>
                   </QuestionCard>
                 );
               }}
@@ -415,6 +418,9 @@ export function Dashboard() {
                 >
                   <button className="btn btn-sm btn-lapis" onClick={() => act(q.id, "display")} disabled={isBusy(q.id)}>
                     Show on screen
+                  </button>
+                  <button className="btn btn-sm btn-quiet" onClick={() => act(q.id, "review")} disabled={isBusy(q.id)}>
+                    Return to review
                   </button>
                 </QuestionCard>
               )}

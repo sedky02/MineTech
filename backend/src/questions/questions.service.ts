@@ -36,6 +36,14 @@ const DISPLAYABLE: QuestionStatus[] = [
   QuestionStatus.PENDING,
 ];
 
+/** Statuses the moderator can send back to "To review" (SPEC §4). */
+const RETURNABLE_TO_REVIEW: QuestionStatus[] = [
+  QuestionStatus.MODERATOR_APPROVED,
+  QuestionStatus.HOST_APPROVED,
+  QuestionStatus.REJECTED,
+  QuestionStatus.ANSWERED,
+];
+
 const listOrder: Prisma.QuestionOrderByWithRelationInput[] = [
   { position: 'asc' },
   { createdAt: 'asc' },
@@ -312,18 +320,28 @@ export class QuestionsService {
   }
 
   /**
-   * Sends a rejected or answered question back to "To review", as if it had
-   * just arrived: the workflow timestamps are cleared so it goes through the
-   * moderator and host again, and it lands at the end of the list. Neither
-   * state is visible to the host or the presentation, so only moderators hear
-   * about it.
+   * Sends a question back to "To review", as if it had just arrived: the
+   * workflow timestamps are cleared so it goes through the moderator and host
+   * again, and it lands at the end of the list. Ready, rejected and answered
+   * questions are invisible to the host and the presentation, so only
+   * moderators hear about them; a question taken from the host's queue also
+   * tells the host to move on.
    */
   async returnToReview(id: string) {
+    const target = await this.prisma.question.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    if (!target) throw new NotFoundException('Question not found');
+    const from = target.status;
+
     const now = new Date();
+    // Conditional on the status just read, so a concurrent change still
+    // fails with 409 instead of applying twice.
     const question = await this.transition(
       this.prisma,
       id,
-      [QuestionStatus.REJECTED, QuestionStatus.ANSWERED],
+      RETURNABLE_TO_REVIEW.includes(from) ? from : RETURNABLE_TO_REVIEW,
       {
         status: QuestionStatus.PENDING,
         returnedToReviewAt: now,
@@ -341,6 +359,12 @@ export class QuestionsService {
       SocketEvent.QUESTION_RETURNED_TO_REVIEW,
       toModeratorView(question),
     );
+    if (from === QuestionStatus.MODERATOR_APPROVED) {
+      // Taken from the host's queue: the host view must move on.
+      this.realtime.emit(Room.HOST, SocketEvent.QUESTION_RETURNED_TO_REVIEW, {
+        id,
+      });
+    }
     return toModeratorView(question);
   }
 

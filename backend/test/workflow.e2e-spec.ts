@@ -458,10 +458,62 @@ describe('Question workflow (SPEC §4, §20)', () => {
       expect(removed.body.status).toBe('MODERATOR_APPROVED');
     });
 
-    it('only accepts rejected or answered questions', async () => {
+    it("takes a question out of the host's queue", async () => {
+      const first = await createQuestion('Host is reviewing this one');
+      const second = await createQuestion('Second in the host queue');
+      await mod('patch', `/moderator/questions/${first}/approve`).expect(200);
+      await mod('patch', `/moderator/questions/${second}/approve`).expect(200);
+
+      const r = await rooms();
+      const res = await mod(
+        'patch',
+        `/moderator/questions/${first}/review`,
+      ).expect(200);
+      expect(res.body).toMatchObject({
+        status: 'PENDING',
+        moderatorApprovedAt: null,
+      });
+      expect(res.body.returnedToReviewAt).not.toBeNull();
+      await r.moderator.waitFor('QUESTION_RETURNED_TO_REVIEW');
+      // The host view moves on to the next question.
+      await r.host.waitFor('QUESTION_RETURNED_TO_REVIEW');
+      await settle();
+      expect(r.presentation.names()).toEqual([]);
+
+      const current = await host('get', '/host/question').expect(200);
+      expect(current.body.question.id).toBe(second);
+      await host('patch', `/host/questions/${first}/approve`).expect(409);
+
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.pending.map((q: any) => q.id)).toEqual([first]);
+      expect(body.awaitingHost.map((q: any) => q.id)).toEqual([second]);
+    });
+
+    it('sends a ready question back through the host', async () => {
+      const id = await toHostApproved('Ready, then back to review?');
+
+      const r = await rooms();
+      const res = await mod('patch', `/moderator/questions/${id}/review`).expect(
+        200,
+      );
+      expect(res.body).toMatchObject({
+        status: 'PENDING',
+        moderatorApprovedAt: null,
+        hostApprovedAt: null,
+      });
+      expect(res.body.returnedToReviewAt).not.toBeNull();
+      await r.moderator.waitFor('QUESTION_RETURNED_TO_REVIEW');
+      await settle();
+      expect(r.host.names()).toEqual([]);
+      expect(r.presentation.names()).toEqual([]);
+
+      const { body } = await mod('get', '/moderator/questions');
+      expect(body.pending.map((q: any) => q.id)).toEqual([id]);
+      expect(body.ready).toEqual([]);
+    });
+
+    it('only accepts questions with the host, ready, rejected or answered', async () => {
       const id = await createQuestion();
-      await mod('patch', `/moderator/questions/${id}/review`).expect(409);
-      await mod('patch', `/moderator/questions/${id}/approve`).expect(200);
       await mod('patch', `/moderator/questions/${id}/review`).expect(409);
       await mod('patch', `/moderator/questions/${id}/display`).expect(200);
       await mod('patch', `/moderator/questions/${id}/review`).expect(409);
